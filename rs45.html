@@ -11,23 +11,43 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden}
 .player{position:fixed;inset:0;background:#000}
 video{width:100%;height:100%;object-fit:contain}
 
+/* BIG CENTER PLAY */
+.center-play{
+ position:absolute;inset:0;
+ display:flex;align-items:center;justify-content:center;
+ z-index:30;cursor:pointer
+}
+.center-play.hide{display:none}
+.center-play span{
+ width:90px;height:90px;
+ background:rgba(255,255,255,.25);
+ backdrop-filter:blur(4px);
+ border-radius:50%;
+ display:flex;align-items:center;justify-content:center;
+ font-size:40px;color:#fff
+}
+
 /* CONTROLS */
 .controls{
  position:absolute;bottom:0;width:100%;
  padding:10px;
- background:linear-gradient(transparent,rgba(0,0,0,.95));
+ background:linear-gradient(transparent,rgba(0,0,0,.95))
 }
 .progress{height:7px;background:#555;border-radius:10px;position:relative;margin-bottom:6px}
 .progress-fill{height:100%;width:0;background:#2196f3;border-radius:10px}
-.thumb{position:absolute;top:50%;width:18px;height:18px;background:#fff;border-radius:50%;transform:translate(-50%,-50%);left:0}
+.thumb{
+ position:absolute;top:50%;
+ width:18px;height:18px;
+ background:#fff;border-radius:50%;
+ transform:translate(-50%,-50%);left:0
+}
 
 .time{color:#fff;font-size:11px;text-align:right}
 .row{display:flex;align-items:center;gap:6px;justify-content:space-between;color:#fff}
 
 .btn{
  width:36px;height:36px;
- border:1.5px solid #fff;
- border-radius:50%;
+ border:1.5px solid #fff;border-radius:50%;
  display:flex;align-items:center;justify-content:center;
  cursor:pointer
 }
@@ -38,19 +58,14 @@ video{width:100%;height:100%;object-fit:contain}
 
 /* SETTINGS */
 .settings{
- position:absolute;
- bottom:60px;right:10px;
- background:#111;
- border-radius:12px;
- padding:12px;
- width:180px;
- display:none;
- z-index:50
+ position:absolute;bottom:60px;right:10px;
+ background:#111;border-radius:12px;
+ padding:12px;width:180px;
+ display:none;z-index:50
 }
 .settings label{color:#aaa;font-size:11px}
 .settings select{
- width:100%;
- margin:6px 0 12px;
+ width:100%;margin:6px 0 12px;
  background:#000;color:#fff;
  border:1px solid #555;border-radius:4px;height:26px
 }
@@ -63,10 +78,8 @@ video{width:100%;height:100%;object-fit:contain}
  z-index:100
 }
 .box{
- width:340px;
- padding:26px 24px;
- border-radius:22px;
- text-align:center;
+ width:340px;padding:26px 24px;
+ border-radius:22px;text-align:center;
  background:linear-gradient(135deg,#1e3c72,#2a5298);
  color:#fff
 }
@@ -99,12 +112,16 @@ video{width:100%;height:100%;object-fit:contain}
 <div class="player" id="player">
  <video id="video" playsinline></video>
 
- <div class="controls" id="controls">
+ <!-- BIG CENTER PLAY -->
+ <div class="center-play" id="centerPlay">
+  <span>▶</span>
+ </div>
+
+ <div class="controls">
   <div class="progress" id="progress">
    <div class="progress-fill" id="bar"></div>
    <div class="thumb" id="thumb"></div>
   </div>
-
   <div class="time" id="time">00:00 / 00:00</div>
 
   <div class="row">
@@ -116,7 +133,7 @@ video{width:100%;height:100%;object-fit:contain}
   </div>
  </div>
 
- <!-- SETTINGS PANEL -->
+ <!-- SETTINGS -->
  <div class="settings" id="settings">
   <label>Speed</label>
   <select id="speed">
@@ -140,7 +157,6 @@ video{width:100%;height:100%;object-fit:contain}
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <script>
 const v=document.getElementById("video");
-const player=document.getElementById("player");
 const playBtn=document.getElementById("play");
 const back=document.getElementById("back");
 const fwd=document.getElementById("fwd");
@@ -153,18 +169,18 @@ const bar=document.getElementById("bar");
 const thumb=document.getElementById("thumb");
 const progress=document.getElementById("progress");
 const timeEl=document.getElementById("time");
+const centerPlay=document.getElementById("centerPlay");
 const tgPopup=document.getElementById("tgPopup");
 const continueBtn=document.getElementById("continueBtn");
 
 let hls;
 const url=new URLSearchParams(location.search).get("Url");
 
-/* LOAD VIDEO */
+/* LOAD */
 if(Hls.isSupported() && url){
  hls=new Hls();
  hls.loadSource(decodeURIComponent(url));
  hls.attachMedia(v);
-
  hls.on(Hls.Events.MANIFEST_PARSED,()=>{
   quality.innerHTML='<option value="-1">AUTO</option>';
   hls.levels.forEach((l,i)=>{
@@ -185,10 +201,19 @@ continueBtn.onclick=()=>{
  tgPopup.style.display="none";
 };
 
-/* PLAY */
+/* CENTER PLAY */
+centerPlay.onclick=()=>v.play();
+
+/* PLAY / PAUSE */
 playBtn.onclick=()=>v.paused?v.play():v.pause();
-v.onplay=()=>playBtn.classList.add("pause");
-v.onpause=()=>playBtn.classList.remove("pause");
+v.onplay=()=>{
+ playBtn.classList.add("pause");
+ centerPlay.classList.add("hide");
+};
+v.onpause=()=>{
+ playBtn.classList.remove("pause");
+ centerPlay.classList.remove("hide");
+};
 
 /* BACK / FWD */
 back.onclick=()=>v.currentTime=Math.max(0,v.currentTime-10);
@@ -199,8 +224,7 @@ speed.onchange=e=>v.playbackRate=parseFloat(e.target.value);
 
 /* QUALITY */
 quality.onchange=e=>{
- if(!hls)return;
- hls.currentLevel=parseInt(e.target.value);
+ if(hls) hls.currentLevel=parseInt(e.target.value);
 };
 
 /* SETTINGS */
@@ -209,12 +233,12 @@ settingsBtn.onclick=e=>{
  settings.style.display=settings.style.display==="block"?"none":"block";
 };
 settings.onclick=e=>e.stopPropagation();
-player.onclick=()=>settings.style.display="none";
+document.body.onclick=()=>settings.style.display="none";
 
 /* FULLSCREEN */
 fs.onclick=()=>{
  !document.fullscreenElement
- ? player.requestFullscreen()
+ ? document.documentElement.requestFullscreen()
  : document.exitFullscreen();
 };
 
