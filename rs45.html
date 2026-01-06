@@ -56,8 +56,10 @@ video{width:100%;height:100%;object-fit:contain}
 .controls{
  position:absolute;bottom:0;width:100%;
  padding:10px;
- background:linear-gradient(transparent,rgba(0,0,0,.95))
+ background:linear-gradient(transparent,rgba(0,0,0,.95));
+ transition:0.3s;
 }
+.controls.hide{transform:translateY(100%);opacity:0}
 .progress{
  height:7px;background:#555;
  border-radius:10px;position:relative;margin-bottom:6px;
@@ -161,7 +163,7 @@ video{width:100%;height:100%;object-fit:contain}
  </div>
 
  <!-- CONTROLS -->
- <div class="controls">
+ <div class="controls hide" id="controls">
   <div class="progress" id="progress">
    <div class="progress-fill" id="bar"></div>
    <div class="thumb" id="thumb"></div>
@@ -215,10 +217,11 @@ const thumb=document.getElementById("thumb");
 const progress=document.getElementById("progress");
 const timeEl=document.getElementById("time");
 const centerPlay=document.getElementById("centerPlay");
+const controls=document.getElementById("controls");
 const tgPopup=document.getElementById("tgPopup");
 const continueBtn=document.getElementById("continueBtn");
 
-let hls,drag=false,seek=0;
+let hls,drag=false,seek=0,hideTimeout;
 const url=new URLSearchParams(location.search).get("Url");
 
 /* TIME FORMAT HH:MM:SS */
@@ -246,7 +249,10 @@ if(Hls.isSupported() && url){
 }else if(url){v.src=decodeURIComponent(url);}
 
 /* POPUP */
-continueBtn.onclick=()=>tgPopup.style.display="none";
+continueBtn.onclick=()=>{
+ tgPopup.style.display="none";
+ centerPlay.classList.remove("hide");
+};
 
 /* PLAY */
 centerPlay.onclick=()=>v.play();
@@ -267,15 +273,9 @@ settingsBtn.onclick=e=>{
  e.stopPropagation();
  settings.style.display=settings.style.display==="block"?"none":"block";
 };
-
-// BODY CLICK TO HIDE SETTINGS (EXCEPT WHEN CLICKING INSIDE)
 document.body.addEventListener("click", e=>{
- if (!settings.contains(e.target) && e.target !== settingsBtn) {
-   settings.style.display="none";
- }
+ if (!settings.contains(e.target) && e.target !== settingsBtn) settings.style.display="none";
 });
-
-// STOP PROPAGATION ON SELECTS SO DROPDOWN WORKS
 speed.addEventListener("click", e=>e.stopPropagation());
 quality.addEventListener("click", e=>e.stopPropagation());
 
@@ -288,9 +288,9 @@ fs.onclick=()=>{
 
 /* ==== PROGRESS DRAG ==== */
 function pct(x){ const r=progress.getBoundingClientRect(); return Math.min(Math.max((x-r.left)/r.width,0),1); }
-function start(x){ drag=true; v.pause(); seek=pct(x); bar.style.width=thumb.style.left=seek*100+"%"; }
-function move(x){ if(!drag) return; seek=pct(x); bar.style.width=thumb.style.left=seek*100+"%"; }
-function end(){ if(!drag) return; drag=false; v.currentTime=seek*v.duration; v.play(); }
+function start(x){ drag=true; v.pause(); seek=pct(x); bar.style.width=thumb.style.left=seek*100+"%"; showControls(); }
+function move(x){ if(!drag) return; seek=pct(x); bar.style.width=thumb.style.left=seek*100+"%"; showControls(); }
+function end(){ if(!drag) return; drag=false; v.currentTime=seek*v.duration; v.play(); showControls(); }
 
 progress.onmousedown=e=>start(e.clientX);
 window.onmousemove=e=>move(e.clientX);
@@ -306,6 +306,16 @@ v.ontimeupdate=()=>{
  bar.style.width=thumb.style.left=p+"%";
  timeEl.textContent=`${fmt(v.currentTime)} / ${fmt(v.duration)}`;
 };
+
+/* CONTROLS SHOW/HIDE */
+function showControls(){
+ controls.classList.remove("hide");
+ clearTimeout(hideTimeout);
+ if(!drag){
+   hideTimeout=setTimeout(()=>controls.classList.add("hide"),2000);
+ }
+}
+player.addEventListener("click", showControls);
 </script>
 </body>
 </html>
