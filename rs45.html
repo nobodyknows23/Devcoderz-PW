@@ -8,106 +8,45 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif}
 html,body{width:100%;height:100%;background:#000;overflow:hidden}
-
 .player{position:fixed;inset:0;background:#000}
 video{width:100%;height:100%;object-fit:contain}
 
 /* TOP BRAND */
-.top-brand{
- position:absolute;
- top:6px;left:50%;
- transform:translateX(-50%);
- z-index:20;text-align:center;
- pointer-events:none
-}
+.top-brand{position:absolute;top:6px;left:50%;transform:translateX(-50%);z-index:20;text-align:center;pointer-events:none}
 .top-brand .jsr{color:#ff9800;font-weight:700;font-size:14px}
 .top-brand .dev{font-size:11px;color:#fff;opacity:.85}
 
 /* CENTER PLAY */
-.center-play{
- position:absolute;inset:0;
- display:flex;align-items:center;justify-content:center;
- z-index:5;cursor:pointer
-}
+.center-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:5;cursor:pointer}
 .center-play.hide{display:none}
-.center-play span{
- width:84px;height:84px;
- background:rgba(255,255,255,.25);
- backdrop-filter:blur(4px);
- border-radius:50%;
- display:flex;align-items:center;justify-content:center;
- font-size:36px;color:#fff
-}
+.center-play span{width:84px;height:84px;background:rgba(255,255,255,.25);backdrop-filter:blur(4px);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;color:#fff}
 
 /* CONTROLS */
-.controls{
- position:absolute;bottom:0;width:100%;
- padding:10px;
- background:linear-gradient(transparent,rgba(0,0,0,.95));
- transition:.3s
-}
+.controls{position:absolute;bottom:0;width:100%;padding:10px;background:linear-gradient(transparent,rgba(0,0,0,.95));transition:.3s}
 .controls.hide{transform:translateY(100%);opacity:0}
 
-.progress{
- height:7px;background:#555;border-radius:10px;
- position:relative;margin-bottom:6px
-}
-.progress-fill{
- height:100%;width:0;
- background:#2196f3;border-radius:10px
-}
-.thumb{
- position:absolute;top:50%;
- width:18px;height:18px;
- background:#fff;border-radius:50%;
- transform:translate(-50%,-50%);
- left:0
-}
+.progress{height:7px;background:#555;border-radius:10px;position:relative;margin-bottom:6px}
+.progress-fill{height:100%;width:0;background:#2196f3;border-radius:10px}
+.thumb{position:absolute;top:50%;width:18px;height:18px;background:#fff;border-radius:50%;transform:translate(-50%,-50%);left:0}
 
 .time{color:#fff;font-size:11px;text-align:right}
+.row{display:flex;align-items:center;gap:6px;justify-content:space-between;color:#fff}
 
-.row{
- display:flex;align-items:center;
- gap:6px;justify-content:space-between;
- color:#fff
-}
-.btn{
- width:36px;height:36px;
- border:1.5px solid #fff;border-radius:50%;
- display:flex;align-items:center;justify-content:center;
- cursor:pointer
-}
+.btn{width:36px;height:36px;border:1.5px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer}
 
 #play{font-size:0}
 #play::before{content:"▶";font-size:16px;margin-left:2px}
 #play.pause::before{content:"❚❚";margin-left:0}
 
-select{
- background:#000;color:#fff;
- border:1px solid #555;border-radius:4px;
- font-size:11px;height:26px
-}
+/* SETTINGS POPUP */
+.settings{position:absolute;bottom:60px;right:10px;background:#111;border-radius:12px;padding:12px;width:160px;display:none;z-index:30}
+.settings label{color:#aaa;font-size:11px}
+.settings select{width:100%;margin-top:4px;margin-bottom:10px;background:#000;color:#fff;border:1px solid #555;border-radius:4px;height:26px}
 
-/* TELEGRAM POPUP */
-.overlay{
- position:fixed;inset:0;
- background:rgba(0,0,0,.7);
- display:flex;align-items:center;justify-content:center;
- z-index:50
-}
-.box{
- width:360px;padding:32px;
- border-radius:22px;
- text-align:center;
- background:linear-gradient(135deg,#1e3c72,#2a5298);
- box-shadow:0 0 40px rgba(42,82,152,.6);
- color:#fff
-}
-.box a,.box button{
- margin-top:16px;padding:14px;
- border-radius:28px;border:none;
- font-weight:700;width:100%
-}
+/* TELEGRAM */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:50}
+.box{width:360px;padding:32px;border-radius:22px;text-align:center;background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff}
+.box a,.box button{margin-top:16px;padding:14px;border-radius:28px;border:none;font-weight:700;width:100%}
 .join{background:#fff;color:#1e3c72;text-decoration:none}
 .continue{background:rgba(0,0,0,.25);color:#fff;border:1px solid #fff}
 </style>
@@ -118,11 +57,8 @@ select{
 <div class="overlay" id="tgPopup">
  <div class="box">
   <h2>Join our Telegram</h2>
-  <p>Click below to join premium channel</p>
-  <a class="join" href="https://t.me/+JXdxtVzQf-NhM2Jl" target="_blank">
-   Join Telegram
-  </a>
-  <button class="continue" id="continueBtn">Continue to Video</button>
+  <a class="join" href="https://t.me/+JXdxtVzQf-NhM2Jl" target="_blank">Join Telegram</a>
+  <button class="continue" id="continueBtn">Continue</button>
  </div>
 </div>
 
@@ -147,137 +83,75 @@ select{
   <div class="btn" id="back">⟲10</div>
   <div class="btn" id="play"></div>
   <div class="btn" id="fwd">10⟳</div>
-
-  <select id="speed">
-   <option>0.5</option><option>0.75</option>
-   <option selected>1</option>
-   <option>1.25</option><option>1.5</option><option>2</option>
-  <option selected>2.25</option>
-  <option selected>2.5</option>
-  <option selected>2.75</option>
-<option selected>3</option>
-  </select>
-
-  <select id="quality"><option value="-1">AUTO</option></select>
+  <div class="btn" id="settingsBtn">⚙️</div>
   <div class="btn" id="fs">⛶</div>
  </div>
 </div>
+
+<div class="settings" id="settings">
+ <label>Speed</label>
+ <select id="speed">
+  <option>0.5</option><option>0.75</option>
+  <option selected>1</option>
+  <option>1.25</option><option>1.5</option>
+  <option>2</option><option>2.25</option><option>2.5</option><option>2.75</option><option>3</option>
+ </select>
+
+ <label>Quality</label>
+ <select id="quality">
+  <option value="-1">AUTO</option>
+  <option value="1080">1080p</option>
+ </select>
+</div>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <script>
-const v=document.getElementById("video"),
-player=document.getElementById("player"),
-controls=document.getElementById("controls"),
-centerPlay=document.getElementById("centerPlay"),
-bar=document.getElementById("bar"),
-thumb=document.getElementById("thumb"),
-progress=document.getElementById("progress"),
-timeEl=document.getElementById("time"),
-playBtn=document.getElementById("play"),
-back=document.getElementById("back"),
-fwd=document.getElementById("fwd"),
-speed=document.getElementById("speed"),
-quality=document.getElementById("quality"),
-fs=document.getElementById("fs"),
-tgPopup=document.getElementById("tgPopup"),
-continueBtn=document.getElementById("continueBtn");
+const v=video,controls=controls,centerPlay=centerPlay,
+bar=bar,thumb=thumb,progress=progress,timeEl=time,
+playBtn=play,back=back,fwd=fwd,
+speed=speed,quality=quality,fs=fs,
+settings=document.getElementById("settings"),
+settingsBtn=document.getElementById("settingsBtn"),
+tgPopup=tgPopup,continueBtn=continueBtn;
 
-let hls,dragging=false,seekPercent=0;
+let hls,drag=false,pctVal=0;
 const url=new URLSearchParams(location.search).get("Url");
 
-/* TIME FORMAT */
-const fmt=t=>{
- if(isNaN(t))return"00:00:00";
- let h=t/3600|0,m=t%3600/60|0,s=t%60|0;
- return [h,m,s].map(n=>String(n).padStart(2,"0")).join(":");
-};
+const fmt=t=>isNaN(t)?"00:00:00":[t/3600|0,t%3600/60|0,t%60|0].map(n=>String(n).padStart(2,"0")).join(":");
 
-/* LOAD */
 if(Hls.isSupported()&&url){
  hls=new Hls();
  hls.loadSource(decodeURIComponent(url));
  hls.attachMedia(v);
- hls.on(Hls.Events.MANIFEST_PARSED,()=>{
-  quality.innerHTML='<option value="-1">AUTO</option>';
-  hls.levels.forEach((l,i)=>{
-   if(l.height<=1080){
-    let o=document.createElement("option");
-    o.value=i;o.text=l.height+"p";
-    quality.appendChild(o);
-   }
-  });
- });
 }else if(url){v.src=decodeURIComponent(url);}
 
-/* TELEGRAM */
-continueBtn.onclick=()=>{
- tgPopup.style.display="none";
- centerPlay.classList.remove("hide");
-};
-
-/* PLAY */
+continueBtn.onclick=()=>{tgPopup.style.display="none";centerPlay.classList.remove("hide");};
 centerPlay.onclick=()=>v.play();
 playBtn.onclick=()=>v.paused?v.play():v.pause();
 v.onplay=()=>{playBtn.classList.add("pause");centerPlay.classList.add("hide");};
 v.onpause=()=>{playBtn.classList.remove("pause");centerPlay.classList.remove("hide");};
 
-/* CONTROLS */
-player.onclick=()=>{
- controls.classList.remove("hide");
- clearTimeout(window.ht);
- window.ht=setTimeout(()=>controls.classList.add("hide"),2000);
+settingsBtn.onclick=e=>{
+ e.stopPropagation();
+ settings.style.display=settings.style.display==="block"?"none":"block";
 };
 
-/* BACK/FWD */
-back.onclick=()=>v.currentTime=Math.max(0,v.currentTime-10);
-fwd.onclick=()=>v.currentTime=Math.min(v.duration,v.currentTime+10);
-
-/* SPEED/QUALITY */
 speed.onchange=e=>v.playbackRate=parseFloat(e.target.value);
-quality.onchange=e=>hls&&(hls.currentLevel=parseInt(e.target.value));
+quality.onchange=e=>{
+ if(hls && e.target.value!="-1") hls.currentLevel=0;
+};
 
-/* ===== SMOOTH THUMB DRAG (MOUSE + TOUCH) ===== */
-function pct(x){
- const r=progress.getBoundingClientRect();
- return Math.min(Math.max((x-r.left)/r.width,0),1);
-}
-function start(x){
- dragging=true;v.pause();
- seekPercent=pct(x);
- bar.style.width=thumb.style.left=seekPercent*100+"%";
-}
-function move(x){
- if(!dragging)return;
- seekPercent=pct(x);
- bar.style.width=thumb.style.left=seekPercent*100+"%";
-}
-function end(){
- if(!dragging)return;
- dragging=false;
- v.currentTime=seekPercent*v.duration;
- v.play();
-}
-progress.onmousedown=e=>start(e.clientX);
-window.onmousemove=e=>move(e.clientX);
-window.onmouseup=end;
-progress.addEventListener("touchstart",e=>start(e.touches[0].clientX),{passive:true});
-window.addEventListener("touchmove",e=>move(e.touches[0].clientX),{passive:true});
-window.addEventListener("touchend",end);
+player.onclick=()=>settings.style.display="none";
 
-/* TIME UPDATE */
+fs.onclick=()=>!document.fullscreenElement?player.requestFullscreen():document.exitFullscreen();
+
 v.ontimeupdate=()=>{
- if(dragging||!v.duration)return;
+ if(!v.duration)return;
  let p=v.currentTime/v.duration*100;
  bar.style.width=thumb.style.left=p+"%";
  timeEl.textContent=`${fmt(v.currentTime)} / ${fmt(v.duration)}`;
-};
-
-/* FULLSCREEN */
-fs.onclick=()=>{
- !document.fullscreenElement?
- player.requestFullscreen():
- document.exitFullscreen();
 };
 </script>
 </body>
