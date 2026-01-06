@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Ultra Player Fixed</title>
+<title>Ultra Player Fixed Hide</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif;}
 html,body{width:100%;height:100%;background:#000;overflow:hidden;}
@@ -162,8 +162,9 @@ speed.onchange=e=>v.playbackRate=parseFloat(e.target.value);
 quality.onchange=e=>hls&&(hls.currentLevel=parseInt(e.target.value));
 
 /* SETTINGS */
-settingsBtn.onclick=e=>{ e.stopPropagation(); settings.style.display=settings.style.display==="block"?"none":"block"; };
+settingsBtn.onclick=e=>{ e.stopPropagation(); settings.style.display=settings.style.display==="block"?"none":"block"; showControls(true); };
 document.body.addEventListener("click", e=>{ if(!settings.contains(e.target) && e.target!==settingsBtn) settings.style.display="none"; });
+
 speed.addEventListener("click", e=>e.stopPropagation());
 quality.addEventListener("click", e=>e.stopPropagation());
 
@@ -172,9 +173,9 @@ fs.onclick=()=>{ !document.fullscreenElement?document.documentElement.requestFul
 
 /* PROGRESS DRAG */
 function pct(x){ const r=progress.getBoundingClientRect(); return Math.min(Math.max((x-r.left)/r.width,0),1); }
-function start(x){ drag=true; v.pause(); seek=pct(x); bar.style.width=thumb.style.left=seek*100+"%"; showControls(); }
-function move(x){ if(!drag) return; seek=pct(x); bar.style.width=thumb.style.left=seek*100+"%"; showControls(); }
-function end(){ if(!drag) return; drag=false; v.currentTime=seek*v.duration; v.play(); showControls(); }
+function start(x){ drag=true; v.pause(); seek=pct(x); bar.style.width=thumb.style.left=seek*100+"%"; showControls(true); }
+function move(x){ if(!drag) return; seek=pct(x); bar.style.width=thumb.style.left=seek*100+"%"; showControls(true); }
+function end(){ if(!drag) return; drag=false; v.currentTime=seek*v.duration; v.play(); showControls(true); }
 
 progress.onmousedown=e=>start(e.clientX);
 window.onmousemove=e=>move(e.clientX);
@@ -187,10 +188,12 @@ window.addEventListener("touchend",end);
 v.ontimeupdate=()=>{ if(drag||!v.duration)return; let p=v.currentTime/v.duration*100; bar.style.width=thumb.style.left=p+"%"; timeEl.textContent=`${fmt(v.currentTime)} / ${fmt(v.duration)}`; };
 
 /* SHOW/HIDE CONTROLS RELIABLE */
-function showControls(){
+function showControls(force=false){
  controls.classList.remove("hide");
- clearTimeout(hideTimeout);
+clearTimeout(hideTimeout);
+if(force || !drag && settings.style.display==="none"){
  hideTimeout=setTimeout(()=>controls.classList.add("hide"),2000);
+}
 }
 player.addEventListener("click", e=>{
  if(e.target===v || e.target===player){
