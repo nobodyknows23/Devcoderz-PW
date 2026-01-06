@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport"
-content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+ content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>DevCoderz Ultra Player</title>
 
 <style>
@@ -277,18 +277,14 @@ fs.onclick=()=>{
 };
 
 /* ==== PROGRESS DRAG ==== */
-function pct(x){
- const r=progress.getBoundingClientRect();
- return Math.min(Math.max((x-r.left)/r.width,0),1);
-}
-function start(x){drag=true;v.pause();seek=pct(x);bar.style.width=thumb.style.left=seek*100+"%";}
-function move(x){if(!drag)return;seek=pct(x);bar.style.width=thumb.style.left=seek*100+"%";}
-function end(){if(!drag)return;drag=false;v.currentTime=seek*v.duration;v.play();}
+function pct(x){ const r=progress.getBoundingClientRect(); return Math.min(Math.max((x-r.left)/r.width,0),1); }
+function start(x){ drag=true; v.pause(); seek=pct(x); bar.style.width=thumb.style.left=seek*100+"%"; }
+function move(x){ if(!drag) return; seek=pct(x); bar.style.width=thumb.style.left=seek*100+"%"; }
+function end(){ if(!drag) return; drag=false; v.currentTime=seek*v.duration; v.play(); }
 
 progress.onmousedown=e=>start(e.clientX);
 window.onmousemove=e=>move(e.clientX);
 window.onmouseup=end;
-
 progress.addEventListener("touchstart",e=>start(e.touches[0].clientX),{passive:true});
 window.addEventListener("touchmove",e=>move(e.touches[0].clientX),{passive:true});
 window.addEventListener("touchend",end);
