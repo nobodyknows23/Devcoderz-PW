@@ -267,7 +267,17 @@ settingsBtn.onclick=e=>{
  e.stopPropagation();
  settings.style.display=settings.style.display==="block"?"none":"block";
 };
-document.body.onclick=()=>settings.style.display="none";
+
+// BODY CLICK TO HIDE SETTINGS (EXCEPT WHEN CLICKING INSIDE)
+document.body.addEventListener("click", e=>{
+ if (!settings.contains(e.target) && e.target !== settingsBtn) {
+   settings.style.display="none";
+ }
+});
+
+// STOP PROPAGATION ON SELECTS SO DROPDOWN WORKS
+speed.addEventListener("click", e=>e.stopPropagation());
+quality.addEventListener("click", e=>e.stopPropagation());
 
 /* FULLSCREEN */
 fs.onclick=()=>{
