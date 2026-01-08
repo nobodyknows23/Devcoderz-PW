@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>DevCoderz Url Ultra Smooth Player </title>
+<title>DevCoderz Ultra Smooth Player</title>
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif;}
@@ -28,10 +28,25 @@ background:linear-gradient(transparent,rgba(0,0,0,.9));
 transition:.3s;z-index:35;}
 .controls.hide{transform:translateY(100%);opacity:0;}
 
-.progress{height:7px;background:#555;border-radius:10px;position:relative;margin-bottom:6px;}
+.progress{
+ height:7px;
+ background:#555;
+ border-radius:10px;
+ position:relative;
+ margin-bottom:6px;
+ touch-action:none;
+}
 .progress-fill{height:100%;width:0;background:#2196f3;border-radius:10px;}
-.thumb{position:absolute;top:50%;width:18px;height:18px;background:#fff;
-border-radius:50%;transform:translate(-50%,-50%);left:0;}
+.thumb{
+ position:absolute;
+ top:50%;
+ width:18px;
+ height:18px;
+ background:#fff;
+ border-radius:50%;
+ transform:translate(-50%,-50%);
+ left:0;
+}
 
 .time{color:#fff;font-size:11px;text-align:right;margin-bottom:4px;}
 .row{display:flex;align-items:center;gap:6px;justify-content:space-between;color:#fff;}
@@ -133,7 +148,8 @@ const controls=document.getElementById("controls");
 const tgPopup=document.getElementById("tgPopup");
 const continueBtn=document.getElementById("continueBtn");
 
-let hls,drag=false,seek=0,hideTimer;
+let hls,drag=false,seek=0,raf=null;
+
 const url=new URLSearchParams(location.search).get("Url");
 
 function fmt(t){
@@ -142,93 +158,44 @@ function fmt(t){
  return [h,m,s].map(n=>String(n).padStart(2,"0")).join(":");
 }
 
-if(Hls.isSupported() && url){
- hls=new Hls();
- hls.loadSource(decodeURIComponent(url));
- hls.attachMedia(v);
- hls.on(Hls.Events.MANIFEST_PARSED,()=>{
-  quality.innerHTML='<option value="-1">AUTO</option>';
-  hls.levels.forEach((l,i)=>{
-   if(l.height){
-    let o=document.createElement("option");
-    o.value=i;o.text=l.height+"p";
-    quality.appendChild(o);
-   }
-  });
- });
-}else if(url){v.src=decodeURIComponent(url);}
-
-continueBtn.onclick=()=>tgPopup.style.display="none";
-
-centerPlay.onclick=e=>{e.stopPropagation();v.play();}
-playBtn.onclick=e=>{e.stopPropagation();v.paused?v.play():v.pause();}
-
-v.onplay=()=>{playBtn.classList.add("pause");centerPlay.classList.add("hide");show();}
-v.onpause=()=>{playBtn.classList.remove("pause");centerPlay.classList.remove("hide");show();}
-
-back.onclick=e=>{e.stopPropagation();v.currentTime=Math.max(0,v.currentTime-10);show(true);}
-fwd.onclick=e=>{e.stopPropagation();v.currentTime=Math.min(v.duration,v.currentTime+10);show(true);}
-
-speed.onchange=e=>v.playbackRate=parseFloat(e.target.value);
-quality.onchange=e=>hls&&(hls.currentLevel=parseInt(e.target.value));
-
-settingsBtn.onclick=e=>{
- e.stopPropagation();
- settings.style.display=settings.style.display==="block"?"none":"block";
- show(true);
-};
-
-fs.onclick=e=>{
- e.stopPropagation();
- !document.fullscreenElement?player.requestFullscreen():document.exitFullscreen();
-};
-
 function pct(x){
  const r=progress.getBoundingClientRect();
  return Math.min(Math.max((x-r.left)/r.width,0),1);
 }
 
-/* ===== THUMB DRAG FIX (MOUSE + TOUCH) ===== */
+/* ===== SMOOTH DRAG ===== */
 progress.addEventListener("pointerdown",e=>{
- e.preventDefault();e.stopPropagation();
  drag=true;
+ progress.setPointerCapture(e.pointerId);
  seek=pct(e.clientX);
- bar.style.width=thumb.style.left=seek*100+"%";
- show(true);
+ v.pause();
+ updateSeek();
 });
 
-window.addEventListener("pointermove",e=>{
+progress.addEventListener("pointermove",e=>{
  if(!drag)return;
  seek=pct(e.clientX);
- bar.style.width=thumb.style.left=seek*100+"%";
 });
 
-window.addEventListener("pointerup",()=>{
- if(!drag)return;
+progress.addEventListener("pointerup",e=>{
  drag=false;
+ progress.releasePointerCapture(e.pointerId);
  v.currentTime=seek*v.duration;
  v.play();
 });
-/* ===== END FIX ===== */
+
+function updateSeek(){
+ if(!drag)return;
+ bar.style.width=thumb.style.left=(seek*100)+"%";
+ raf=requestAnimationFrame(updateSeek);
+}
+/* ===================== */
 
 v.ontimeupdate=()=>{
  if(drag||!v.duration)return;
  let p=v.currentTime/v.duration*100;
  bar.style.width=thumb.style.left=p+"%";
  timeEl.textContent=`${fmt(v.currentTime)} / ${fmt(v.duration)}`;
-};
-
-function show(force=false){
- controls.classList.remove("hide");
- clearTimeout(hideTimer);
- if(force)return;
- hideTimer=setTimeout(()=>controls.classList.add("hide"),2000);
-}
-
-player.onclick=e=>{
- if(e.target===player||e.target===v){
-  controls.classList.contains("hide")?show():controls.classList.add("hide");
- }
 };
 </script>
 
