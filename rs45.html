@@ -44,12 +44,6 @@ display:flex;align-items:center;justify-content:center;cursor:pointer;}
 #play::before{content:"▶";font-size:16px;margin-left:2px;}
 #play.pause::before{content:"❚❚";margin-left:0;}
 
-.settings{position:absolute;bottom:80px;right:10px;background:#111;border-radius:12px;
-padding:12px;width:180px;display:none;z-index:50;}
-.settings label{color:#aaa;font-size:11px;}
-.settings select{width:100%;margin:6px 0 12px;background:#000;color:#fff;
-border:1px solid #555;border-radius:4px;height:26px;}
-
 .overlay{
  position:fixed;inset:0;background:rgba(0,0,0,.7);
 display:flex;align-items:center;justify-content:center;z-index:100;
@@ -94,7 +88,6 @@ font-weight:700;width:100%;}
    <div class="btn" id="back">⟲10</div>
    <div class="btn" id="play"></div>
    <div class="btn" id="fwd">10⟳</div>
-   <div class="btn" id="settingsBtn">⚙️</div>
    <div class="btn" id="fs">⛶</div>
   </div>
  </div>
@@ -108,8 +101,6 @@ const playBtn=document.getElementById("play");
 const back=document.getElementById("back");
 const fwd=document.getElementById("fwd");
 const fs=document.getElementById("fs");
-const speed=document.getElementById("speed");
-const quality=document.getElementById("quality");
 const controls=document.getElementById("controls");
 const centerPlay=document.getElementById("centerPlay");
 const progress=document.getElementById("progress");
@@ -119,7 +110,6 @@ const tgPopup=document.getElementById("tgPopup");
 const continueBtn=document.getElementById("continueBtn");
 
 let hls,drag=false,seek=0,hideTimer,raf=null;
-
 const url=new URLSearchParams(location.search).get("Url");
 
 function fmt(t){
@@ -158,15 +148,15 @@ centerPlay.onclick=(e)=>{
 /* ===== PLAY / PAUSE BUTTON ===== */
 playBtn.onclick=(e)=>{
  e.preventDefault(); e.stopPropagation();
- if(v.paused) v.play(); else v.pause();
+ if(v.paused){v.play();}else{v.pause();}
 };
 
 /* ===== BACK / FORWARD ===== */
-back.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); v.currentTime=Math.max(0,v.currentTime-10); show(true);}
-fwd.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); v.currentTime=Math.min(v.duration,v.currentTime+10); show(true);}
+back.onclick=(e)=>{e.preventDefault();e.stopPropagation(); v.currentTime=Math.max(0,v.currentTime-10); show(true);}
+fwd.onclick=(e)=>{e.preventDefault();e.stopPropagation(); v.currentTime=Math.min(v.duration,v.currentTime+10); show(true);}
 
 /* ===== FULLSCREEN ===== */
-fs.onclick=(e)=>{ e.preventDefault(); e.stopPropagation();
+fs.onclick=(e)=>{e.preventDefault(); e.stopPropagation();
  !document.fullscreenElement?player.requestFullscreen():document.exitFullscreen();
 };
 
