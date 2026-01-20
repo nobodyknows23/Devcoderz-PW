@@ -116,18 +116,12 @@ font-weight:700;width:100%;}
   <label>Quality</label>
   <select id="quality">
    <option value="-1">AUTO</option>
-   <option value="0">144p</option>
-   <option value="1">240p</option>
-   <option value="2">360p</option>
-   <option value="3">480p</option>
-   <option value="4">720p</option>
   </select>
  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <script>
-const player=document.getElementById("player");
 const v=document.getElementById("video");
 const playBtn=document.getElementById("play");
 const back=document.getElementById("back");
@@ -146,9 +140,11 @@ const tgPopup=document.getElementById("tgPopup");
 const continueBtn=document.getElementById("continueBtn");
 
 let hls,drag=false,seek=0,hideTimer,raf=null;
-const url=new URLSearchParams(location.search).get("Url");
 
-/* ===== VIDEO FORMAT FUNCTION ===== */
+/* ✅ FIXED LINE */
+const url = new URLSearchParams(location.search).get("url");
+
+/* FORMAT */
 function fmt(t){
  if(isNaN(t)) return "00:00:00";
  let h=Math.floor(t/3600),m=Math.floor((t%3600)/60),s=Math.floor(t%60);
@@ -156,7 +152,7 @@ function fmt(t){
 }
 function pct(x){ const r=progress.getBoundingClientRect(); return Math.min(Math.max((x-r.left)/r.width,0),1); }
 
-/* ===== LOAD VIDEO ===== */
+/* LOAD VIDEO */
 if(Hls.isSupported() && url){
  hls=new Hls();
  hls.loadSource(decodeURIComponent(url));
@@ -165,65 +161,58 @@ if(Hls.isSupported() && url){
   quality.innerHTML='<option value="-1">AUTO</option>';
   hls.levels.forEach((l,i)=>{
    if(l.height){
-    let o=document.createElement("option"); o.value=i; o.text=l.height+"p"; quality.appendChild(o);
+    let o=document.createElement("option");
+    o.value=i; o.text=l.height+"p";
+    quality.appendChild(o);
    }
   });
  });
-}else if(url){v.src=decodeURIComponent(url);}
+}else if(url){
+ v.src=decodeURIComponent(url);
+}
 
-/* ===== CONTINUE BUTTON ===== */
-continueBtn.onclick=(e)=>{e.preventDefault();e.stopPropagation();
- tgPopup.style.display="none"; controls.classList.remove("hide"); centerPlay.classList.remove("hide"); player.style.pointerEvents="all";};
+/* CONTINUE */
+continueBtn.onclick=e=>{
+ e.preventDefault();e.stopPropagation();
+ tgPopup.style.display="none";
+ controls.classList.remove("hide");
+ centerPlay.classList.remove("hide");
+};
 
-/* ===== CENTER PLAY ===== */
-centerPlay.onclick=(e)=>{e.preventDefault();e.stopPropagation(); v.play();};
+/* CONTROLS */
+centerPlay.onclick=()=>v.play();
+playBtn.onclick=()=>v.paused?v.play():v.pause();
+back.onclick=()=>v.currentTime=Math.max(0,v.currentTime-10);
+fwd.onclick=()=>v.currentTime=Math.min(v.duration,v.currentTime+10);
+speed.onchange=()=>v.playbackRate=parseFloat(speed.value);
+quality.onchange=()=>{if(hls)hls.currentLevel=parseInt(quality.value)};
+settingsBtn.onclick=()=>settings.style.display=settings.style.display==="block"?"none":"block";
+fs.onclick=()=>!document.fullscreenElement?player.requestFullscreen():document.exitFullscreen();
 
-/* ===== PLAY / PAUSE ===== */
-playBtn.onclick=(e)=>{e.preventDefault();e.stopPropagation();
- v.paused?v.play():v.pause();};
-
-/* ===== BACK / FORWARD ===== */
-back.onclick=(e)=>{e.preventDefault();e.stopPropagation(); v.currentTime=Math.max(0,v.currentTime-10); show(true);}
-fwd.onclick=(e)=>{e.preventDefault();e.stopPropagation(); v.currentTime=Math.min(v.duration,v.currentTime+10); show(true);}
-
-/* ===== SPEED & QUALITY ===== */
-speed.onchange=(e)=>{v.playbackRate=parseFloat(speed.value);}
-quality.onchange=(e)=>{if(hls) hls.currentLevel=parseInt(quality.value);};
-
-/* ===== SETTINGS POPUP ===== */
-settingsBtn.onclick=(e)=>{e.preventDefault();e.stopPropagation();
- settings.style.display=settings.style.display==="block"?"none":"block"; show(true);};
-
-/* ===== FULLSCREEN ===== */
-fs.onclick=(e)=>{e.preventDefault();e.stopPropagation();
- !document.fullscreenElement?player.requestFullscreen():document.exitFullscreen();};
-
-/* ===== SMOOTH DRAG ===== */
 progress.addEventListener("pointerdown",e=>{
- e.preventDefault(); e.stopPropagation(); drag=true; progress.setPointerCapture(e.pointerId);
+ drag=true; progress.setPointerCapture(e.pointerId);
  seek=pct(e.clientX); v.pause(); updateDrag();
 });
-progress.addEventListener("pointermove",e=>{if(!drag)return; seek=pct(e.clientX);});
-progress.addEventListener("pointerup",e=>{drag=false; progress.releasePointerCapture(e.pointerId); v.currentTime=seek*v.duration; v.play();});
-function updateDrag(){if(!drag)return; bar.style.width=thumb.style.left=(seek*100)+"%"; raf=requestAnimationFrame(updateDrag);}
+progress.addEventListener("pointermove",e=>{if(drag)seek=pct(e.clientX);});
+progress.addEventListener("pointerup",e=>{
+ drag=false; progress.releasePointerCapture(e.pointerId);
+ v.currentTime=seek*v.duration; v.play();
+});
+function updateDrag(){
+ if(!drag)return;
+ bar.style.width=thumb.style.left=(seek*100)+"%";
+ raf=requestAnimationFrame(updateDrag);
+}
 
-/* ===== VIDEO TIME UPDATE ===== */
 v.ontimeupdate=()=>{
  if(drag||!v.duration)return;
  let p=v.currentTime/v.duration*100;
  bar.style.width=thumb.style.left=p+"%";
- document.getElementById("time").textContent=`${fmt(v.currentTime)} / ${fmt(v.duration)}`;
+ document.getElementById("time").textContent=
+ `${fmt(v.currentTime)} / ${fmt(v.duration)}`;
 };
-
-/* ===== AUTO-HIDE CONTROLS ===== */
-function show(force=false){controls.classList.remove("hide"); clearTimeout(hideTimer); if(force)return; hideTimer=setTimeout(()=>controls.classList.add("hide"),2000);}
-
-/* ===== PLAYER CLICK SHOW/HIDE ===== */
-player.onclick=e=>{if(e.target===player||e.target===v){controls.classList.contains("hide")?show():controls.classList.add("hide");}};
-
-/* ===== PLAY / PAUSE CLASS TOGGLE ===== */
-v.onplay=()=>{playBtn.classList.add("pause"); centerPlay.classList.add("hide"); show();}
-v.onpause=()=>{playBtn.classList.remove("pause"); centerPlay.classList.remove("hide"); show();}
+v.onplay=()=>{playBtn.classList.add("pause");centerPlay.classList.add("hide");}
+v.onpause=()=>{playBtn.classList.remove("pause");centerPlay.classList.remove("hide");}
 </script>
 </body>
 </html>
