@@ -94,7 +94,6 @@ font-weight:700;width:100%;}
    <div class="btn" id="fwd">10⟳</div>
    <div class="btn" id="fs">⛶</div>
    <div class="btn" id="settingsBtn">⚙️</div>
-   <!-- ✅ Download button added -->
    <div class="btn" id="download" title="Download">⬇</div>
   </div>
  </div>
@@ -143,7 +142,11 @@ const downloadBtn=document.getElementById("download");
 
 let hls,drag=false,seek=0,hideTimer,raf=null;
 const url=new URLSearchParams(location.search).get("url");
-const mp4Url=new URLSearchParams(location.search).get("download"); // MP4 download link
+const mp4Url=new URLSearchParams(location.search).get("download");
+
+if(!mp4Url){
+    downloadBtn.style.display = "none";
+}
 
 function fmt(t){
  if(isNaN(t)) return "00:00:00";
@@ -197,9 +200,7 @@ downloadBtn.onclick=e=>{
  e.stopPropagation();
  if(mp4Url){
    window.open(decodeURIComponent(mp4Url),"_blank");
- }else{
-   alert("Download link not provided!");
- }
+}
 };
 
 progress.addEventListener("pointerdown",e=>{
