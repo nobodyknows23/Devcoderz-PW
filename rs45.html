@@ -9,63 +9,29 @@
 html,body{width:100%;height:100%;background:#000;overflow:hidden;}
 .player{position:fixed;inset:0;background:#000;pointer-events:auto;}
 video{width:100%;height:100%;object-fit:contain;}
-
-.top-brand{position:absolute;top:6px;left:50%;transform:translateX(25%);
-z-index:40;text-align:center;pointer-events:none;}
+.top-brand{position:absolute;top:6px;left:50%;transform:translateX(25%);z-index:40;text-align:center;pointer-events:none;}
 .top-brand .jsr{color:#ff9800;font-weight:700;font-size:14px;}
-
-.top-brand .dev{
-  margin-top:4px;
-  font-size:12px;
-  font-weight:600;
-  color:#00e5ff;
-  text-shadow:0 0 6px #00e5ff, 0 0 12px #00e5ff;
-}
-
-.center-play{position:absolute;inset:0;display:flex;align-items:center;
-justify-content:center;z-index:30;cursor:pointer}
+.top-brand .dev{margin-top:4px;font-size:12px;font-weight:600;color:#00e5ff;text-shadow:0 0 6px #00e5ff,0 0 12px #00e5ff;}
+.center-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:30;cursor:pointer}
 .center-play.hide{display:none}
-.center-play span{width:90px;height:90px;background:rgba(255,255,255,.25);
-backdrop-filter:blur(5px);border-radius:50%;display:flex;
-align-items:center;justify-content:center;font-size:40px;color:#fff}
-
-.controls{position:absolute;bottom:0;width:100%;padding:10px;
-background:linear-gradient(transparent,rgba(0,0,0,.9));
-transition:.3s;z-index:35;}
+.center-play span{width:90px;height:90px;background:rgba(255,255,255,.25);backdrop-filter:blur(5px);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:40px;color:#fff}
+.controls{position:absolute;bottom:0;width:100%;padding:10px;background:linear-gradient(transparent,rgba(0,0,0,.9));transition:.3s;z-index:35;}
 .controls.hide{transform:translateY(100%);opacity:0;}
-
-.progress{
- height:7px;background:#555;border-radius:10px;
- position:relative;margin-bottom:6px;touch-action:none;
-}
+.progress{height:7px;background:#555;border-radius:10px;position:relative;margin-bottom:6px;touch-action:none;}
 .progress-fill{height:100%;width:0;background:#2196f3;border-radius:10px;}
-.thumb{position:absolute;top:50%;width:18px;height:18px;background:#fff;
-border-radius:50%;transform:translate(-50%,-50%);left:0;}
-
+.thumb{position:absolute;top:50%;width:18px;height:18px;background:#fff;border-radius:50%;transform:translate(-50%,-50%);left:0;}
 .time{color:#fff;font-size:11px;text-align:right;margin-bottom:4px;}
 .row{display:flex;align-items:center;gap:6px;justify-content:space-between;color:#fff;}
-.btn{width:38px;height:38px;border:1.5px solid #fff;border-radius:50%;
-display:flex;align-items:center;justify-content:center;cursor:pointer;}
-
+.btn{width:38px;height:38px;border:1.5px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;}
 #play{font-size:0;}
 #play::before{content:"▶";font-size:16px;margin-left:2px;}
 #play.pause::before{content:"❚❚";margin-left:0;}
-
-.settings{position:absolute;bottom:80px;right:10px;background:#111;border-radius:12px;
-padding:12px;width:180px;display:none;z-index:50;}
+.settings{position:absolute;bottom:80px;right:10px;background:#111;border-radius:12px;padding:12px;width:180px;display:none;z-index:50;}
 .settings label{color:#aaa;font-size:11px;}
-.settings select{width:100%;margin:6px 0 12px;background:#000;color:#fff;
-border:1px solid #555;border-radius:4px;height:26px;}
-
-.overlay{
- position:fixed;inset:0;background:rgba(0,0,0,.7);
-display:flex;align-items:center;justify-content:center;z-index:100;
-pointer-events:all;
-}
-.box{width:340px;padding:26px;border-radius:22px;text-align:center;
-background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff;}
-.box a,.box button{margin-top:14px;padding:14px;border-radius:28px;border:none;
-font-weight:700;width:100%;}
+.settings select{width:100%;margin:6px 0 12px;background:#000;color:#fff;border:1px solid #555;border-radius:4px;height:26px;}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:100;pointer-events:all;}
+.box{width:340px;padding:26px;border-radius:22px;text-align:center;background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff;}
+.box a,.box button{margin-top:14px;padding:14px;border-radius:28px;border:none;font-weight:700;width:100%;}
 .join{background:#fff;color:#1e3c72;text-decoration:none;}
 .continue{background:rgba(0,0,0,.25);color:#fff;border:1px solid #fff;}
 </style>
@@ -86,7 +52,6 @@ font-weight:700;width:100%;}
 
  <div class="top-brand">
   <div class="jsr">🚩 Jai Shree Ram 🚩</div>
-
   <div class="dev">Developed by - DevXShivam</div>
  </div>
 
@@ -104,6 +69,7 @@ font-weight:700;width:100%;}
    <div class="btn" id="fwd">10⟳</div>
    <div class="btn" id="fs">⛶</div>
    <div class="btn" id="settingsBtn">⚙️</div>
+   <div class="btn" id="download">⬇</div>
   </div>
  </div>
 
@@ -122,9 +88,7 @@ font-weight:700;width:100%;}
    <option value="3">3x</option>
   </select>
   <label>Quality</label>
-  <select id="quality">
-   <option value="-1">AUTO</option>
-  </select>
+  <select id="quality"><option value="-1">AUTO</option></select>
  </div>
 </div>
 
@@ -147,6 +111,7 @@ const bar=document.getElementById("bar");
 const thumb=document.getElementById("thumb");
 const tgPopup=document.getElementById("tgPopup");
 const continueBtn=document.getElementById("continueBtn");
+const downloadBtn=document.getElementById("download");
 
 let hls,drag=false,seek=0,hideTimer,raf=null;
 const url=new URLSearchParams(location.search).get("url");
@@ -219,8 +184,7 @@ v.ontimeupdate=()=>{
  if(drag||!v.duration)return;
  let p=v.currentTime/v.duration*100;
  bar.style.width=thumb.style.left=p+"%";
- document.getElementById("time").textContent=
- `${fmt(v.currentTime)} / ${fmt(v.duration)}`;
+ document.getElementById("time").textContent=`${fmt(v.currentTime)} / ${fmt(v.duration)}`;
 };
 
 function show(force=false){
@@ -245,6 +209,23 @@ v.onpause=()=>{
  playBtn.classList.remove("pause");
  centerPlay.classList.remove("hide");
  show(true);
+};
+
+// DOWNLOAD → server se MP4 link → 1DM auto open
+downloadBtn.onclick = async e => {
+ e.stopPropagation();
+ if(!url) return alert("No video url");
+ const res = await fetch("http://localhost:3000/export",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({ m3u8: decodeURIComponent(url) })
+ });
+ const data = await res.json();
+ if(data.success){
+  window.location.href = "http://localhost:3000"+data.path;
+ } else {
+  alert("Download failed");
+ }
 };
 </script>
 </body>
