@@ -1,1 +1,136 @@
-<
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>DevCoderz Ultra Smooth Player</title>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif;}
+html,body{width:100%;height:100%;background:#000;overflow:hidden;}
+.player{position:fixed;inset:0;background:#000;}
+video{width:100%;height:100%;object-fit:contain;}
+
+.top-brand{position:absolute;top:6px;left:50%;transform:translateX(25%);z-index:40;text-align:center;pointer-events:none;}
+.top-brand .jsr{color:#ff9800;font-weight:700;font-size:14px;}
+.top-brand .dev{font-size:12px;color:#00e5ff;font-weight:600;text-shadow:0 0 6px #00e5ff;}
+
+.center-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:30;cursor:pointer}
+.center-play.hide{display:none}
+.center-play span{width:90px;height:90px;background:rgba(255,255,255,.25);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:40px;color:#fff}
+
+.controls{position:absolute;bottom:0;width:100%;padding:10px;background:linear-gradient(transparent,rgba(0,0,0,.9));transition:.3s;z-index:35;}
+.controls.hide{transform:translateY(100%);opacity:0;}
+
+.progress{height:7px;background:#555;border-radius:10px;position:relative;margin-bottom:6px;}
+.progress-fill{height:100%;width:0;background:#2196f3;border-radius:10px;}
+.thumb{position:absolute;top:50%;width:18px;height:18px;background:#fff;border-radius:50%;transform:translate(-50%,-50%);left:0;}
+
+.time{color:#fff;font-size:11px;text-align:right;margin-bottom:4px;}
+.row{display:flex;gap:6px;justify-content:space-between;}
+.btn{width:38px;height:38px;border:1.5px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;}
+
+#play::before{content:"▶";font-size:16px;margin-left:2px;}
+#play.pause::before{content:"❚❚";margin-left:0;}
+</style>
+</head>
+
+<body>
+
+<div class="player" id="player">
+ <video id="video" playsinline></video>
+
+ <div class="top-brand">
+  <div class="jsr">🚩 Jai Shree Ram 🚩</div>
+  <div class="dev">Developed by - DevXShivam</div>
+ </div>
+
+ <div class="center-play" id="centerPlay"><span>▶</span></div>
+
+ <div class="controls hide" id="controls">
+  <div class="progress" id="progress">
+   <div class="progress-fill" id="bar"></div>
+   <div class="thumb" id="thumb"></div>
+  </div>
+  <div class="time" id="time">00:00:00 / 00:00:00</div>
+  <div class="row">
+   <div class="btn" id="back">⟲10</div>
+   <div class="btn" id="play"></div>
+   <div class="btn" id="fwd">10⟳</div>
+   <div class="btn" id="fs">⛶</div>
+   <div class="btn" id="download">⬇</div>
+  </div>
+ </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script>
+const v = document.getElementById("video");
+const playBtn = document.getElementById("play");
+const back = document.getElementById("back");
+const fwd = document.getElementById("fwd");
+const fs = document.getElementById("fs");
+const centerPlay = document.getElementById("centerPlay");
+const controls = document.getElementById("controls");
+const progress = document.getElementById("progress");
+const bar = document.getElementById("bar");
+const thumb = document.getElementById("thumb");
+const downloadBtn = document.getElementById("download");
+
+// 🔥 FIXED HERE (Url + url dono support)
+const params = new URLSearchParams(location.search);
+const url = params.get("url") || params.get("Url");
+
+let hls, drag=false;
+
+function fmt(t){
+ if(isNaN(t)) return "00:00:00";
+ let h=Math.floor(t/3600),m=Math.floor((t%3600)/60),s=Math.floor(t%60);
+ return [h,m,s].map(n=>String(n).padStart(2,"0")).join(":");
+}
+
+if(Hls.isSupported() && url){
+ hls = new Hls();
+ hls.loadSource(decodeURIComponent(url));
+ hls.attachMedia(v);
+}else if(url){
+ v.src = decodeURIComponent(url);
+}
+
+centerPlay.onclick=()=>v.play();
+playBtn.onclick=()=>v.paused?v.play():v.pause();
+back.onclick=()=>v.currentTime=Math.max(0,v.currentTime-10);
+fwd.onclick=()=>v.currentTime=Math.min(v.duration,v.currentTime+10);
+
+fs.onclick=()=>!document.fullscreenElement?document.documentElement.requestFullscreen():document.exitFullscreen();
+
+v.onplay=()=>{playBtn.classList.add("pause");centerPlay.classList.add("hide");controls.classList.remove("hide");};
+v.onpause=()=>{playBtn.classList.remove("pause");centerPlay.classList.remove("hide");};
+
+v.ontimeupdate=()=>{
+ let p=v.currentTime/v.duration*100;
+ bar.style.width=thumb.style.left=p+"%";
+ document.getElementById("time").textContent=`${fmt(v.currentTime)} / ${fmt(v.duration)}`;
+};
+
+// 🔽 DOWNLOAD (server-side MP4 → 1DM catch)
+downloadBtn.onclick = async ()=>{
+ const videoUrl = url || v.currentSrc;
+ if(!videoUrl) return alert("No video url");
+
+ const res = await fetch("http://localhost:3000/export",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({ m3u8: decodeURIComponent(videoUrl) })
+ });
+
+ const data = await res.json();
+ if(data.success){
+  window.location.href = "http://localhost:3000"+data.path;
+ }else{
+  alert("Download failed");
+ }
+};
+</script>
+</body>
+</html>
