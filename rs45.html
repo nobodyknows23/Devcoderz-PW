@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>DevCoderz Smooth Video Player</title>
+<title>Video Player</title>
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif;}
@@ -11,7 +11,7 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;}
 .player{position:fixed;inset:0;background:#000;}
 video{width:100%;height:100%;object-fit:contain;}
 
-.center-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:-50;cursor:pointer}
+.center-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:30;cursor:pointer}
 .center-play.hide{display:none}
 .center-play span{width:90px;height:90px;background:rgba(255,255,255,.25);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:40px;color:#fff}
 
@@ -96,7 +96,9 @@ const settingsBtn=document.getElementById("settingsBtn");
 const params=new URLSearchParams(location.search);
 const url=params.get("url")||params.get("Url");
 
-let hls,dragging=false,hideTimer;
+let hls;
+let dragging=false;
+let hideTimer=null;
 
 function fmt(t){
  if(isNaN(t))return"00:00:00";
@@ -112,11 +114,13 @@ if(Hls.isSupported()&&url){
  v.src=decodeURIComponent(url);
 }
 
-// ▶ controls logic
+/* ---------- CONTROLS AUTO HIDE ---------- */
 function showControls(){
  controls.classList.remove("hide");
  clearTimeout(hideTimer);
- hideTimer=setTimeout(()=>controls.classList.add("hide"),2000);
+ if(!dragging){
+  hideTimer=setTimeout(()=>controls.classList.add("hide"),2000);
+ }
 }
 
 player.addEventListener("click",e=>{
@@ -125,6 +129,7 @@ player.addEventListener("click",e=>{
  settings.style.display="none";
 });
 
+/* ---------- BASIC CONTROLS ---------- */
 centerPlay.onclick=()=>{v.play();showControls();};
 playBtn.onclick=()=>{v.paused?v.play():v.pause();showControls();};
 back.onclick=()=>{v.currentTime=Math.max(0,v.currentTime-10);showControls();};
@@ -141,7 +146,7 @@ v.ontimeupdate=()=>{
  time.textContent=`${fmt(v.currentTime)} / ${fmt(v.duration)}`;
 };
 
-// smooth seek
+/* ---------- SMOOTH SEEK ---------- */
 function seek(e){
  const r=progress.getBoundingClientRect();
  const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
@@ -150,17 +155,28 @@ function seek(e){
  if(v.duration) v.currentTime=p*v.duration;
 }
 
-thumb.addEventListener("mousedown",()=>dragging=true);
-document.addEventListener("mousemove",e=>dragging&&seek(e));
-document.addEventListener("mouseup",()=>dragging=false);
+function startDrag(){
+ dragging=true;
+ clearTimeout(hideTimer);
+ controls.classList.remove("hide");
+}
 
-thumb.addEventListener("touchstart",()=>dragging=true,{passive:true});
+function endDrag(){
+ dragging=false;
+ showControls(); // 2 sec baad hide
+}
+
+thumb.addEventListener("mousedown",startDrag);
+document.addEventListener("mousemove",e=>dragging&&seek(e));
+document.addEventListener("mouseup",endDrag);
+
+thumb.addEventListener("touchstart",startDrag,{passive:true});
 document.addEventListener("touchmove",e=>dragging&&seek(e),{passive:true});
-document.addEventListener("touchend",()=>dragging=false);
+document.addEventListener("touchend",endDrag);
 
 progress.addEventListener("click",e=>{seek(e);showControls();});
 
-// settings
+/* ---------- SETTINGS ---------- */
 settingsBtn.onclick=e=>{
  e.stopPropagation();
  settings.style.display=settings.style.display==="block"?"none":"block";
