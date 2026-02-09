@@ -3,34 +3,34 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Ultra Smooth Player</title>
+<title>Video Player</title>
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif}
 html,body{width:100%;height:100%;background:#000;overflow:hidden}
-
 .player{position:fixed;inset:0;background:#000}
 video{width:100%;height:100%;object-fit:contain}
 
 /* 🔥 TOP GLOW BRAND */
 .top-brand{
- position:absolute;top:6px;left:50%;transform:translateX(-50%);
- text-align:center;z-index:40;pointer-events:none
+ position:absolute;top:6px;left:50%;
+ transform:translateX(-50%);
+ z-index:40;pointer-events:none;
+ text-align:center
 }
 .top-brand .jsr{
  color:#ff9800;font-weight:700;font-size:14px;
- text-shadow:0 0 10px #ff9800,0 0 20px #ff9800
+ text-shadow:0 0 8px #ff9800,0 0 16px #ff9800
 }
 .top-brand .dev{
  font-size:12px;color:#00e5ff;font-weight:600;
- text-shadow:0 0 8px #00e5ff,0 0 16px #00e5ff
+ text-shadow:0 0 6px #00e5ff,0 0 14px #00e5ff
 }
 
-/* CENTER PLAY */
 .center-play{
- position:absolute;inset:0;display:flex;
- align-items:center;justify-content:center;
- z-index:30
+ position:absolute;inset:0;
+ display:flex;align-items:center;justify-content:center;
+ z-index:20;cursor:pointer
 }
 .center-play.hide{display:none}
 .center-play span{
@@ -40,175 +40,237 @@ video{width:100%;height:100%;object-fit:contain}
  font-size:40px;color:#fff
 }
 
-/* CONTROLS */
 .controls{
  position:absolute;bottom:0;width:100%;
  padding:10px;
  background:linear-gradient(transparent,rgba(0,0,0,.9));
- transition:.3s;z-index:35
+ transition:.3s;z-index:30
 }
 .controls.hide{transform:translateY(100%);opacity:0}
 
-.progress{
- height:7px;background:#555;border-radius:10px;
- position:relative;margin-bottom:6px
-}
-.progress-fill{
- height:100%;width:0;background:#2196f3;border-radius:10px
-}
+.progress{height:7px;background:#555;border-radius:10px;position:relative;margin-bottom:6px}
+.progress-fill{height:100%;width:0;background:#2196f3;border-radius:10px}
 .thumb{
  position:absolute;top:50%;
- width:18px;height:18px;border-radius:50%;
- background:#fff;transform:translate(-50%,-50%);
+ width:18px;height:18px;
+ background:#fff;border-radius:50%;
+ transform:translate(-50%,-50%);
  left:0
 }
 
-.time{color:#fff;font-size:11px;text-align:right;margin-bottom:4px}
+.time{color:#fff;font-size:11px;text-align:right;margin-bottom:6px}
 .row{display:flex;gap:6px;justify-content:space-between}
-
 .btn{
- width:38px;height:38px;border:1.5px solid #fff;
- border-radius:50%;display:flex;
- align-items:center;justify-content:center;
- color:#fff;cursor:pointer
+ width:38px;height:38px;
+ border:1.5px solid #fff;
+ border-radius:50%;
+ display:flex;align-items:center;justify-content:center;
+ color:#fff;cursor:pointer;
+ user-select:none
 }
 
 #play::before{content:"▶";font-size:16px;margin-left:2px}
 #play.pause::before{content:"❚❚";margin-left:0}
 
-/* SETTINGS */
+/* ⚙ SETTINGS */
 .settings{
- position:absolute;bottom:60px;right:10px;
- background:#111;border-radius:10px;
- padding:8px;display:none;z-index:50
+ position:absolute;right:10px;bottom:70px;
+ background:rgba(0,0,0,.9);
+ color:#fff;padding:10px;
+ border-radius:8px;font-size:13px;
+ display:none;z-index:50
 }
-.settings button{
- width:100%;margin:4px 0;
- background:#222;color:#fff;
- border:none;padding:6px;border-radius:6px
+.settings.show{display:block}
+.settings div{margin:6px 0;cursor:pointer}
+.settings div:hover{color:#00e5ff}
+
+/* 📢 TELEGRAM POP */
+.telegram-pop{
+ position:absolute;
+ bottom:130px;left:50%;
+ transform:translateX(-50%);
+ background:#0088cc;
+ color:#fff;padding:10px 14px;
+ border-radius:30px;
+ display:flex;align-items:center;gap:8px;
+ font-size:13px;z-index:60;
+ box-shadow:0 0 14px rgba(0,136,204,.8)
+}
+.telegram-pop.hide{display:none}
+.telegram-pop button{
+ background:#fff;color:#0088cc;
+ border:none;border-radius:20px;
+ padding:4px 10px;font-weight:600;
+ cursor:pointer
+}
+.telegram-pop span{
+ margin-left:6px;font-weight:bold;
+ cursor:pointer
 }
 </style>
 </head>
 
 <body>
+
 <div class="player" id="player">
-<video id="video" playsinline></video>
 
-<div class="top-brand">
- <div class="jsr">🚩 Jai Shree Ram 🚩</div>
- <div class="dev">DevxShivam</div>
-</div>
+ <video id="video" playsinline></video>
 
-<div class="center-play" id="centerPlay"><span>▶</span></div>
-
-<div class="controls hide" id="controls">
- <div class="progress" id="progress">
-  <div class="progress-fill" id="bar"></div>
-  <div class="thumb" id="thumb"></div>
+ <div class="top-brand">
+  <div class="jsr">🚩 Jai Shree Ram 🚩</div>
+  <div class="dev">Developed by DevxShivam</div>
  </div>
- <div class="time" id="time">00:00:00 / 00:00:00</div>
- <div class="row">
-  <div class="btn" id="back">⟲10</div>
-  <div class="btn" id="play"></div>
-  <div class="btn" id="fwd">10⟳</div>
-  <div class="btn" id="fs">⛶</div>
-  <div class="btn" id="gear">⚙</div>
- </div>
-</div>
 
-<div class="settings" id="settings"></div>
+ <div class="center-play" id="centerPlay"><span>▶</span></div>
+
+ <div class="controls hide" id="controls">
+  <div class="progress" id="progress">
+   <div class="progress-fill" id="bar"></div>
+   <div class="thumb" id="thumb"></div>
+  </div>
+  <div class="time" id="time">00:00:00 / 00:00:00</div>
+  <div class="row">
+   <div class="btn" id="back">⟲10</div>
+   <div class="btn" id="play"></div>
+   <div class="btn" id="fwd">10⟳</div>
+   <div class="btn" id="settingsBtn">⚙</div>
+   <div class="btn" id="fs">⛶</div>
+  </div>
+ </div>
+
+ <div class="settings" id="settings">
+  <b>Speed</b>
+  <div data-speed="1">1x</div>
+  <div data-speed="1.25">1.25x</div>
+  <div data-speed="1.5">1.5x</div>
+  <div data-speed="1.75">1.75x</div>
+  <div data-speed="2">2x</div>
+  <div data-speed="2.5">2.5x</div>
+  <div data-speed="3">3x</div>
+  <hr>
+  <b>Quality</b>
+  <div data-level="-1">Auto</div>
+ </div>
+
+ <div class="telegram-pop hide" id="tgPop">
+  Join Telegram
+  <button id="tgBtn">Open</button>
+  <span id="tgClose">✕</span>
+ </div>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <script>
-const v=video,controls=controls,bar=bar,thumb=thumb;
-let hideTimer,drag=false;
+const v=document.getElementById("video"),
+controls=document.getElementById("controls"),
+centerPlay=document.getElementById("centerPlay"),
+playBtn=document.getElementById("play"),
+progress=document.getElementById("progress"),
+bar=document.getElementById("bar"),
+thumb=document.getElementById("thumb"),
+time=document.getElementById("time"),
+settings=document.getElementById("settings"),
+settingsBtn=document.getElementById("settingsBtn"),
+fs=document.getElementById("fs"),
+back=document.getElementById("back"),
+fwd=document.getElementById("fwd"),
+tgPop=document.getElementById("tgPop"),
+tgBtn=document.getElementById("tgBtn"),
+tgClose=document.getElementById("tgClose");
 
-const url=new URLSearchParams(location.search).get("url");
-let hls;
+const params=new URLSearchParams(location.search);
+const url=params.get("url")||params.get("Url");
 
-if(Hls.isSupported() && url){
- hls=new Hls();
- hls.loadSource(url);
- hls.attachMedia(v);
-}else if(url){v.src=url}
+let hls,drag=false,hideTimer;
 
 function fmt(t){
  if(isNaN(t))return"00:00:00";
- let h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=Math.floor(t%60);
- return[h,m,s].map(n=>String(n).padStart(2,"0")).join(":");
+ let h=Math.floor(t/3600),
+ m=Math.floor((t%3600)/60),
+ s=Math.floor(t%60);
+ return [h,m,s].map(n=>String(n).padStart(2,"0")).join(":");
 }
 
-/* TAP TO TOGGLE */
-player.onclick=()=>{
- controls.classList.toggle("hide");
+if(Hls.isSupported()&&url){
+ hls=new Hls();
+ hls.loadSource(decodeURIComponent(url));
+ hls.attachMedia(v);
+ hls.on(Hls.Events.MANIFEST_PARSED,()=>{
+  hls.levels.forEach((l,i)=>{
+   if(l.height){
+    let d=document.createElement("div");
+    d.textContent=l.height+"p";
+    d.onclick=()=>hls.currentLevel=i;
+    settings.appendChild(d);
+   }
+  });
+ });
+}else if(url){
+ v.src=decodeURIComponent(url);
 }
 
-/* PLAY */
-centerPlay.onclick=()=>v.play();
-play.onclick=()=>v.paused?v.play():v.pause();
-back.onclick=()=>v.currentTime=Math.max(0,v.currentTime-10);
-fwd.onclick=()=>v.currentTime=Math.min(v.duration,v.currentTime+10);
-fs.onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
-
-v.onplay=()=>{
- play.classList.add("pause");
- centerPlay.classList.add("hide");
+function showControls(){
  controls.classList.remove("hide");
-};
-v.onpause=()=>{
- play.classList.remove("pause");
- centerPlay.classList.remove("hide");
-};
+ clearTimeout(hideTimer);
+ hideTimer=setTimeout(()=>{ if(!drag) controls.classList.add("hide") },2000);
+}
 
-/* PROGRESS */
+centerPlay.onclick=()=>{v.play();showControls()};
+playBtn.onclick=()=>{v.paused?v.play():v.pause();showControls()};
+back.onclick=()=>{v.currentTime=Math.max(0,v.currentTime-10);showControls()};
+fwd.onclick=()=>{v.currentTime=Math.min(v.duration,v.currentTime+10);showControls()};
+fs.onclick=()=>!document.fullscreenElement?document.documentElement.requestFullscreen():document.exitFullscreen();
+
+v.onplay=()=>{playBtn.classList.add("pause");centerPlay.classList.add("hide")};
+v.onpause=()=>{playBtn.classList.remove("pause");centerPlay.classList.remove("hide")};
+
 v.ontimeupdate=()=>{
- if(drag)return;
+ if(drag) return;
  let p=v.currentTime/v.duration*100;
  bar.style.width=thumb.style.left=p+"%";
  time.textContent=`${fmt(v.currentTime)} / ${fmt(v.duration)}`;
 };
 
-/* THUMB DRAG SMOOTH */
-progress.onpointerdown=e=>{
- drag=true;
- controls.classList.remove("hide");
- move(e);
- document.onpointermove=move;
- document.onpointerup=()=>{
-  drag=false;
-  document.onpointermove=null;
-  setTimeout(()=>controls.classList.add("hide"),2000);
- };
-};
-
-function move(e){
- let r=progress.getBoundingClientRect();
- let p=Math.min(100,Math.max(0,(e.clientX-r.left)/r.width*100));
- bar.style.width=thumb.style.left=p+"%";
- v.currentTime=p/100*v.duration;
+function seek(e){
+ const r=progress.getBoundingClientRect();
+ const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
+ const p=Math.min(Math.max(x/r.width,0),1);
+ bar.style.width=thumb.style.left=(p*100)+"%";
+ if(v.duration) v.currentTime=p*v.duration;
 }
 
-/* SETTINGS */
-gear.onclick=()=>{
- settings.style.display=settings.style.display?"":"block";
- settings.innerHTML="<b style='color:white'>Speed</b>";
- [1,1.25,1.5,1.75,2,2.5,3].forEach(s=>{
-  let b=document.createElement("button");
-  b.textContent=s+"x";
-  b.onclick=()=>v.playbackRate=s;
-  settings.appendChild(b);
- });
- if(hls){
-  settings.innerHTML+="<b style='color:white'>Quality</b>";
-  hls.levels.forEach((l,i)=>{
-   let b=document.createElement("button");
-   b.textContent=l.height+"p";
-   b.onclick=()=>hls.currentLevel=i;
-   settings.appendChild(b);
-  });
- }
+thumb.onmousedown=()=>drag=true;
+document.onmousemove=e=>drag&&seek(e);
+document.onmouseup=()=>{if(drag){drag=false;showControls()}};
+
+progress.onclick=seek;
+
+settingsBtn.onclick=()=>{
+ settings.classList.toggle("show");
+ showControls();
 };
+
+settings.querySelectorAll("[data-speed]").forEach(d=>{
+ d.onclick=()=>{v.playbackRate=d.dataset.speed};
+});
+
+settings.querySelector("[data-level='-1']").onclick=()=>hls&&(hls.currentLevel=-1);
+
+/* 📢 Telegram safe click */
+setTimeout(()=>{
+ if(!sessionStorage.getItem("tgShown")){
+  tgPop.classList.remove("hide");
+  sessionStorage.setItem("tgShown",1);
+ }
+},3000);
+
+tgBtn.onclick=()=>{
+ window.open("https://t.me/YOUR_CHANNEL","_blank");
+};
+
+tgClose.onclick=()=>tgPop.classList.add("hide");
 </script>
+
 </body>
 </html>
