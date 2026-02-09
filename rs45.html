@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>DevCoderz Ultra Smooth Player</title>
+<title>Video Player</title>
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif;}
@@ -11,15 +11,16 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;}
 .player{position:fixed;inset:0;background:#000;}
 video{width:100%;height:100%;object-fit:contain;}
 
-.top-brand{position:absolute;top:6px;left:50%;transform:translateX(25%);z-index:40;pointer-events:none;text-align:center;}
-.top-brand .jsr{color:#ff9800;font-weight:700;font-size:14px;}
-.top-brand .dev{font-size:12px;color:#00e5ff;font-weight:600;text-shadow:0 0 6px #00e5ff;}
-
 .center-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:30;cursor:pointer}
 .center-play.hide{display:none}
 .center-play span{width:90px;height:90px;background:rgba(255,255,255,.25);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:40px;color:#fff}
 
-.controls{position:absolute;bottom:0;width:100%;padding:10px;background:linear-gradient(transparent,rgba(0,0,0,.9));z-index:35;transition:.3s}
+.controls{
+ position:absolute;bottom:0;width:100%;
+ padding:10px;
+ background:linear-gradient(transparent,rgba(0,0,0,.9));
+ z-index:35;transition:.3s
+}
 .controls.hide{transform:translateY(100%);opacity:0;}
 
 .progress{height:7px;background:#555;border-radius:10px;position:relative;margin-bottom:6px;}
@@ -29,8 +30,7 @@ video{width:100%;height:100%;object-fit:contain;}
  width:18px;height:18px;
  background:#fff;border-radius:50%;
  transform:translate(-50%,-50%);
- left:0;
- transition:left .08s linear;
+ left:0;transition:left .08s linear;
 }
 
 .time{color:#fff;font-size:11px;text-align:right;margin-bottom:4px;}
@@ -47,20 +47,14 @@ video{width:100%;height:100%;object-fit:contain;}
  display:none;z-index:50;
  max-height:220px;overflow:auto;
 }
-.settings b{color:#00e5ff}
 .settings div{margin:6px 0;cursor:pointer}
 .settings div:hover{color:#2196f3}
 </style>
 </head>
 
 <body>
-<div class="player">
+<div class="player" id="player">
  <video id="video" playsinline></video>
-
- <div class="top-brand">
-  <div class="jsr">🚩 Jai Shree Ram 🚩</div>
-  <div class="dev">Developed by - DevXShivam</div>
- </div>
 
  <div class="center-play" id="centerPlay"><span>▶</span></div>
 
@@ -85,6 +79,7 @@ video{width:100%;height:100%;object-fit:contain;}
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <script>
 const v=document.getElementById("video");
+const player=document.getElementById("player");
 const playBtn=document.getElementById("play");
 const back=document.getElementById("back");
 const fwd=document.getElementById("fwd");
@@ -101,7 +96,7 @@ const settingsBtn=document.getElementById("settingsBtn");
 const params=new URLSearchParams(location.search);
 const url=params.get("url")||params.get("Url");
 
-let hls,dragging=false;
+let hls,dragging=false,hideTimer;
 
 function fmt(t){
  if(isNaN(t))return"00:00:00";
@@ -117,14 +112,27 @@ if(Hls.isSupported()&&url){
  v.src=decodeURIComponent(url);
 }
 
-centerPlay.onclick=()=>v.play();
-playBtn.onclick=()=>v.paused?v.play():v.pause();
-back.onclick=()=>v.currentTime=Math.max(0,v.currentTime-10);
-fwd.onclick=()=>v.currentTime=Math.min(v.duration,v.currentTime+10);
+// ▶ controls logic
+function showControls(){
+ controls.classList.remove("hide");
+ clearTimeout(hideTimer);
+ hideTimer=setTimeout(()=>controls.classList.add("hide"),2000);
+}
+
+player.addEventListener("click",e=>{
+ if(e.target.closest(".btn")||e.target.closest(".settings")) return;
+ controls.classList.contains("hide")?showControls():controls.classList.add("hide");
+ settings.style.display="none";
+});
+
+centerPlay.onclick=()=>{v.play();showControls();};
+playBtn.onclick=()=>{v.paused?v.play():v.pause();showControls();};
+back.onclick=()=>{v.currentTime=Math.max(0,v.currentTime-10);showControls();};
+fwd.onclick=()=>{v.currentTime=Math.min(v.duration,v.currentTime+10);showControls();};
 fs.onclick=()=>!document.fullscreenElement?document.documentElement.requestFullscreen():document.exitFullscreen();
 
-v.onplay=()=>{playBtn.classList.add("pause");centerPlay.classList.add("hide");controls.classList.remove("hide");};
-v.onpause=()=>{playBtn.classList.remove("pause");centerPlay.classList.remove("hide");};
+v.onplay=()=>{playBtn.classList.add("pause");centerPlay.classList.add("hide");showControls();};
+v.onpause=()=>{playBtn.classList.remove("pause");centerPlay.classList.remove("hide");showControls();};
 
 v.ontimeupdate=()=>{
  if(dragging) return;
@@ -133,11 +141,11 @@ v.ontimeupdate=()=>{
  time.textContent=`${fmt(v.currentTime)} / ${fmt(v.duration)}`;
 };
 
-// 🔥 ULTRA SMOOTH THUMB DRAG
+// smooth seek
 function seek(e){
- const rect=progress.getBoundingClientRect();
- const x=(e.touches?e.touches[0].clientX:e.clientX)-rect.left;
- const p=Math.min(Math.max(x/rect.width,0),1);
+ const r=progress.getBoundingClientRect();
+ const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
+ const p=Math.min(Math.max(x/r.width,0),1);
  bar.style.width=thumb.style.left=(p*100)+"%";
  if(v.duration) v.currentTime=p*v.duration;
 }
@@ -150,10 +158,11 @@ thumb.addEventListener("touchstart",()=>dragging=true,{passive:true});
 document.addEventListener("touchmove",e=>dragging&&seek(e),{passive:true});
 document.addEventListener("touchend",()=>dragging=false);
 
-progress.addEventListener("click",seek);
+progress.addEventListener("click",e=>{seek(e);showControls();});
 
-// ⚙ SETTINGS
-settingsBtn.onclick=()=>{
+// settings
+settingsBtn.onclick=e=>{
+ e.stopPropagation();
  settings.style.display=settings.style.display==="block"?"none":"block";
  renderSettings();
 };
@@ -163,13 +172,11 @@ function renderSettings(){
  [1,1.25,1.5,1.75,2,2.5,3].forEach(s=>{
   settings.innerHTML+=`<div onclick="video.playbackRate=${s}">${s}x</div>`;
  });
-
  if(hls){
   settings.innerHTML+="<br><b>Quality</b>";
   settings.innerHTML+=`<div onclick="hls.currentLevel=-1">Auto</div>`;
   hls.levels.forEach((l,i)=>{
-   if(l.height)
-    settings.innerHTML+=`<div onclick="hls.currentLevel=${i}">${l.height}p</div>`;
+   if(l.height) settings.innerHTML+=`<div onclick="hls.currentLevel=${i}">${l.height}p</div>`;
   });
  }
 }
