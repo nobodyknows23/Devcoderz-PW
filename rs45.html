@@ -5,9 +5,21 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>DevCoderz Ultra Smooth Player</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif;}
-html,body{width:100%;height:100%;background:#000;overflow:hidden;}
-.player{position:fixed;inset:0;background:#000;pointer-events:auto;}
+/* Google Search aur Text Selection ko poori tarah block karne ke liye styles */
+*{
+ margin:0;
+ padding:0;
+ box-sizing:border-box;
+ font-family:sans-serif;
+ -webkit-user-select: none;
+ -moz-user-select: none;
+ -ms-user-select: none;
+ user-select: none;
+ -webkit-touch-callout: none;
+ -webkit-tap-highlight-color: transparent;
+}
+html,body{width:100%;height:100%;background:#000;overflow:hidden;touch-action: none;}
+.player{position:fixed;inset:0;background:#000;pointer-events:auto;touch-action: manipulation;}
 video{width:100%;height:100%;object-fit:contain;}
 .top-brand{position:absolute;top:6px;left:50%;transform:translateX(-50%);z-index:40;text-align:center;pointer-events:none;}
 .top-brand .jsr{color:#ff9800;font-weight:700;font-size:14px;}
@@ -15,14 +27,14 @@ video{width:100%;height:100%;object-fit:contain;}
 .center-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:30;cursor:pointer}
 .center-play.hide{display:none}
 .center-play span{width:90px;height:90px;background:rgba(255,255,255,.25);backdrop-filter:blur(5px);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:40px;color:#fff}
-.controls{position:absolute;bottom:0;width:100%;padding:10px;background:linear-gradient(transparent,rgba(0,0,0,.9));transition:.3s;z-index:35;}
+.controls{position:absolute;bottom:0;width:100%;padding:10px;background:linear-gradient(transparent,rgba(0,0,0,.9));transition:.3s;z-index:35;touch-action: none;}
 .controls.hide{transform:translateY(100%);opacity:0;}
 .progress{height:7px;background:#555;border-radius:10px;position:relative;margin-bottom:6px;touch-action:none;cursor:pointer;}
 .progress-fill{height:100%;width:0;background:#2196f3;border-radius:10px;}
 .thumb{position:absolute;top:50%;width:18px;height:18px;background:#fff;border-radius:50%;transform:translate(-50%,-50%);left:0;}
 .time{color:#fff;font-size:11px;text-align:right;margin-bottom:4px;}
 .row{display:flex;align-items:center;gap:6px;justify-content:space-between;color:#fff;}
-.btn{width:40px;height:40px;border:1.5px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;}
+.btn{width:40px;height:40px;border:1.5px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;}
 #play{font-size:0;}
 #play::before{content:"▶";font-size:16px;}
 #play.pause::before{content:"❚❚";font-size:14px;}
@@ -99,23 +111,31 @@ function fmt(t){if(!t||isNaN(t))return"00:00:00";let h=Math.floor(t/3600),m=Math
 function safePlay(){v.play().catch(()=>{v.muted=true;v.play();});}
 function show(f=false){controls.classList.remove("hide");clearTimeout(hideTimer);if(!f)hideTimer=setTimeout(()=>controls.classList.add("hide"),3000);}
 
-continueBtn.onclick=e=>{tgPopup.style.display="none";show();};
-playBtn.onclick=e=>{e.preventDefault();v.paused?safePlay():v.pause();};
-back.onclick=e=>{e.preventDefault();v.currentTime=Math.max(0,v.currentTime-10);};
-fwd.onclick=e=>{e.preventDefault();v.currentTime=Math.min(v.duration,v.currentTime+10);};
-settingsBtn.onclick=e=>{settings.style.display=(settings.style.display==="block"?"none":"block");};
-speed.onchange=()=>v.playbackRate=speed.value;
-quality.onchange=()=>{if(hls)hls.currentLevel=parseInt(quality.value);};
-fs.onclick=e=>{if(!document.fullscreenElement){player.requestFullscreen();screen.orientation?.lock('landscape');}else{document.exitFullscreen();}};
+// e.preventDefault() aur e.stopPropagation() se click leaks ko roka
+continueBtn.onclick=e=>{e.preventDefault();e.stopPropagation();tgPopup.style.display="none";show();};
+centerPlay.onclick=e=>{e.preventDefault();e.stopPropagation();safePlay();};
+playBtn.onclick=e=>{e.preventDefault();e.stopPropagation();v.paused?safePlay():v.pause();};
+back.onclick=e=>{e.preventDefault();e.stopPropagation();v.currentTime=Math.max(0,v.currentTime-10);};
+fwd.onclick=e=>{e.preventDefault();e.stopPropagation();v.currentTime=Math.min(v.duration,v.currentTime+10);};
+settingsBtn.onclick=e=>{e.preventDefault();e.stopPropagation();settings.style.display=(settings.style.display==="block"?"none":"block");};
+speed.onchange=e=>{v.playbackRate=speed.value;};
+quality.onchange=e=>{if(hls)hls.currentLevel=parseInt(quality.value);};
+fs.onclick=e=>{e.preventDefault();e.stopPropagation();if(!document.fullscreenElement){player.requestFullscreen();screen.orientation?.lock('landscape').catch(()=>{});}else{document.exitFullscreen();}};
 
-progress.onpointerdown=e=>{drag=true;progress.setPointerCapture(e.pointerId);const s=(e.clientX-progress.getBoundingClientRect().left)/progress.offsetWidth;v.currentTime=s*v.duration;};
-progress.onpointermove=e=>{if(drag){const s=Math.max(0,Math.min(1,(e.clientX-progress.getBoundingClientRect().left)/progress.offsetWidth));v.currentTime=s*v.duration;}};
-progress.onpointerup=()=>drag=false;
+progress.onpointerdown=e=>{e.preventDefault();e.stopPropagation();drag=true;progress.setPointerCapture(e.pointerId);const s=(e.clientX-progress.getBoundingClientRect().left)/progress.offsetWidth;v.currentTime=s*v.duration;};
+progress.onpointermove=e=>{if(drag){e.preventDefault();e.stopPropagation();const s=Math.max(0,Math.min(1,(e.clientX-progress.getBoundingClientRect().left)/progress.offsetWidth));v.currentTime=s*v.duration;}};
+progress.onpointerup=e=>{e.preventDefault();e.stopPropagation();drag=false;};
 
 v.ontimeupdate=()=>{bar.style.width=thumb.style.left=((v.currentTime/v.duration)*100)+"%";timeDisplay.textContent=`${fmt(v.currentTime)} / ${fmt(v.duration)}`;};
 v.onplay=()=>playBtn.classList.add("pause");
 v.onpause=()=>playBtn.classList.remove("pause");
-player.onclick=e=>{if(e.target===v||e.target===player){controls.classList.toggle("hide");settings.style.display="none";}};
+player.onclick=e=>{
+ e.preventDefault();
+ if(e.target===v||e.target===player){
+  controls.classList.toggle("hide");
+  settings.style.display="none";
+ }
+};
 </script>
 </body>
 </html>
