@@ -22,7 +22,7 @@ video{width:100%;height:100%;object-fit:contain;}
 .thumb{position:absolute;top:50%;width:18px;height:18px;background:#fff;border-radius:50%;transform:translate(-50%,-50%);left:0;}
 .time{color:#fff;font-size:11px;text-align:right;margin-bottom:4px;}
 .row{display:flex;align-items:center;gap:6px;justify-content:space-between;color:#fff;}
-.btn{width:38px;height:38px;border:1.5px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.btn{width:38px;height:38px;border:1.5px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;}
 #play{font-size:0;}
 #play::before{content:"▶";font-size:16px;margin-left:2px;}
 #play.pause::before{content:"❚❚";margin-left:0;}
@@ -59,9 +59,9 @@ video{width:100%;height:100%;object-fit:contain;}
   </div>
   <div class="time" id="time">00:00:00 / 00:00:00</div>
   <div class="row">
-   <div class="btn" id="back">⟲10</div>
+   <div class="btn" id="back">⟲</div>
    <div class="btn" id="play"></div>
-   <div class="btn" id="fwd">10⟳</div>
+   <div class="btn" id="fwd">⟳</div>
    <div class="btn" id="fs">⛶</div>
    <div class="btn" id="settingsBtn">⚙️</div>
   </div>
@@ -70,58 +70,48 @@ video{width:100%;height:100%;object-fit:contain;}
   <label>Speed</label>
   <select id="speed">
    <option value="0.5">0.5x</option>
-   <option value="0.75">0.75x</option>
    <option value="1" selected>1x</option>
-   <option value="1.25">1.25x</option>
-   <option value="1.5">1.5x</option>
    <option value="2">2x</option>
-   <option value="2.25">2.25x</option>
-   <option value="2.5">2.5x</option>
-   <option value="2.75">2.75x</option>
-   <option value="3">3x</option>
   </select>
   <label>Quality</label>
-  <select id="quality">
-   <option value="-1">AUTO</option>
-  </select>
+  <select id="quality"><option value="-1">AUTO</option></select>
  </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <script>
 const player=document.getElementById("player"),v=document.getElementById("video"),playBtn=document.getElementById("play"),back=document.getElementById("back"),fwd=document.getElementById("fwd"),fs=document.getElementById("fs"),speed=document.getElementById("speed"),quality=document.getElementById("quality"),settings=document.getElementById("settings"),settingsBtn=document.getElementById("settingsBtn"),controls=document.getElementById("controls"),centerPlay=document.getElementById("centerPlay"),progress=document.getElementById("progress"),bar=document.getElementById("bar"),thumb=document.getElementById("thumb"),tgPopup=document.getElementById("tgPopup"),continueBtn=document.getElementById("continueBtn");
-let hls,drag=false,hideTimer;
+let hls,drag=false;
 const urlParams=new URLSearchParams(location.search);
-const url=urlParams.has("url")?urlParams.get("url"):null;
-function fmt(t){if(t===Infinity)return"LIVE";if(isNaN(t))return"00:00:00";let h=Math.floor(t/3600),m=Math.floor((t%3600)/60),s=Math.floor(t%60);return[h,m,s].map(n=>String(n).padStart(2,"0")).join(":");}
-function pct(x){const r=progress.getBoundingClientRect();return Math.min(Math.max((x-r.left)/r.width,0),1);}
+const url=urlParams.has("Url")?urlParams.get("Url"):null;
+
+function safePlay(){v.play().catch(()=>{v.muted=true;v.play();});}
 if(url){
  const decodedUrl=decodeURIComponent(url);
- if(Hls.isSupported()&&(decodedUrl.includes(".m3u8")||decodedUrl.includes("blob"))){
-  hls=new Hls();hls.loadSource(decodedUrl);hls.attachMedia(v);
-  hls.on(Hls.Events.MANIFEST_PARSED,()=>{
-   hls.levels.forEach((l,i)=>{if(l.height){let o=document.createElement("option");o.value=i;o.text=l.height+"p";quality.appendChild(o);}});
-  });
- }else{v.src=decodedUrl;}
+ if(Hls.isSupported()){hls=new Hls();hls.loadSource(decodedUrl);hls.attachMedia(v);}
+ else{v.src=decodedUrl;}
 }
-function safePlay(){v.play().catch(()=>{v.muted=true;v.play();});}
-continueBtn.onclick=e=>{e.preventDefault();tgPopup.style.display="none";controls.classList.remove("hide");centerPlay.classList.remove("hide");};
-centerPlay.onclick=e=>{e.stopPropagation();safePlay();};
-playBtn.onclick=e=>{e.stopPropagation();v.paused?safePlay():v.pause();};
-back.onclick=e=>{e.stopPropagation();v.currentTime=Math.max(0,v.currentTime-10);show(true);};
-fwd.onclick=e=>{e.stopPropagation();v.currentTime=Math.min(v.duration,v.currentTime+10);show(true);};
-speed.onchange=()=>v.playbackRate=parseFloat(speed.value);
-quality.onchange=()=>{if(hls)hls.currentLevel=parseInt(quality.value);};
-settingsBtn.onclick=e=>{e.stopPropagation();settings.style.display=settings.style.display==="block"?"none":"block";show(true);};
-fs.onclick=e=>{e.stopPropagation();if(!document.fullscreenElement)player.requestFullscreen().catch(()=>{});else document.exitFullscreen();};
-function updateProgress(p){bar.style.width=thumb.style.left=p+"%";document.getElementById("time").textContent=`${fmt(v.currentTime)} / ${fmt(v.duration)}`;}
-progress.onpointerdown=e=>{drag=true;progress.setPointerCapture(e.pointerId);v.pause();const s=pct(e.clientX);v.currentTime=s*v.duration;updateProgress(s*100);};
-progress.onpointermove=e=>{if(drag&&v.duration){const s=pct(e.clientX);v.currentTime=s*v.duration;updateProgress(s*100);}};
-progress.onpointerup=e=>{if(drag){drag=false;const s=pct(e.clientX);v.currentTime=s*v.duration;safePlay();}};
-v.ontimeupdate=()=>{if(!drag&&v.duration){updateProgress((v.currentTime/v.duration)*100);}};
-function show(f=false){controls.classList.remove("hide");clearTimeout(hideTimer);if(!f)hideTimer=setTimeout(()=>controls.classList.add("hide"),3000);}
-player.onclick=e=>{if(tgPopup.style.display!=="none")return;if(e.target===player||e.target===v){if(controls.classList.contains("hide"))show();else controls.classList.add("hide");settings.style.display="none";}};
-v.onplay=()=>{playBtn.classList.add("pause");centerPlay.classList.add("hide");show();};
-v.onpause=()=>{playBtn.classList.remove("pause");centerPlay.classList.remove("hide");show(true);};
+
+continueBtn.onclick=e=>{e.preventDefault();tgPopup.style.display="none";controls.classList.remove("hide");};
+centerPlay.onclick=e=>{e.preventDefault();safePlay();};
+playBtn.onclick=e=>{e.preventDefault();v.paused?safePlay():v.pause();};
+back.onclick=e=>{e.preventDefault();v.currentTime=Math.max(0,v.currentTime-10);};
+fwd.onclick=e=>{e.preventDefault();v.currentTime=Math.min(v.duration,v.currentTime+10);};
+settingsBtn.onclick=e=>{e.preventDefault();settings.style.display=settings.style.display==="block"?"none":"block";};
+fs.onclick=e=>{
+ e.preventDefault();
+ if(!document.fullscreenElement){
+  player.requestFullscreen().catch(()=>{});
+  if(screen.orientation) screen.orientation.lock('landscape').catch(()=>{});
+ }else{
+  document.exitFullscreen();
+  if(screen.orientation) screen.orientation.unlock();
+ }
+};
+
+v.ontimeupdate=()=>{if(v.duration){bar.style.width=thumb.style.left=((v.currentTime/v.duration)*100)+"%";}};
+v.onplay=()=>{playBtn.classList.add("pause");centerPlay.classList.add("hide");};
+v.onpause=()=>{playBtn.classList.remove("pause");centerPlay.classList.remove("hide");};
+player.onclick=e=>{if(e.target===v||e.target===player){controls.classList.toggle("hide");settings.style.display="none";}};
 </script>
 </body>
 </html>
