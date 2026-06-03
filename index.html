@@ -4,57 +4,58 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lectures</title>
-    <link href="https://www.pw.live/batches-new/index.BZrLlnYz.css" rel="stylesheet">
+    <link href="https://www.pw.live/batches-new/index.BZrLlnYz.css" rel="stylesheet" type="text/css">
     <style>
         body { background: #f9fafb; padding: 20px; font-family: sans-serif; }
-        .lecture-card { background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 15px; 
-                        border: 1px solid #e5e7eb; cursor: pointer; display: flex; align-items: center; }
+        .wrapper-fOD1sd { max-width: 800px; margin: auto; }
+        .lecture-card { background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e5e7eb; cursor: pointer; transition: 0.2s; }
         .lecture-card:hover { border: 1px solid #22c55e; }
-        #loadingScreen { position: fixed; inset: 0; background: #fff; display: flex; 
-                         align-items: center; justify-content: center; z-index: 9999; }
+        #loadingScreen { position: fixed; inset: 0; background: #fff; display: flex; align-items: center; justify-content: center; z-index: 9999; }
     </style>
 </head>
 <body>
 
-    <div id="loadingScreen">Loading...</div>
+    <div id="loadingScreen">Loading content...</div>
 
     <div class="wrapper-fOD1sd">
-        <div id="contentContainer">
-            </div>
+        <div id="contentContainer"></div>
     </div>
 
     <script>
-        async function loadLectures() {
+        async function init() {
             const query = window.location.search.substring(1);
+            if (!query) {
+                document.getElementById('loadingScreen').innerHTML = "URL parameters missing!";
+                return;
+            }
+
             const proxyUrl = `https://devcoderz-player.vercel.app/api/stream.js?${query}`;
 
             try {
                 const response = await fetch(proxyUrl);
-                const result = await response.json();
+                const data = await response.json();
                 
                 document.getElementById('loadingScreen').style.display = 'none';
                 const container = document.getElementById('contentContainer');
 
-                // API response ko handle karna (agar data object mein hai ya array mein)
-                const list = Array.isArray(result) ? result : (result.data || []);
+                // JSON se data extract karna
+                const lectures = Array.isArray(data) ? data : (data.data || []);
 
-                if (list.length > 0) {
-                    container.innerHTML = list.map(item => `
+                if (lectures.length > 0) {
+                    container.innerHTML = lectures.map(item => `
                         <div class="lecture-card" onclick="window.open('https://www.pw.live/study/batches/lectures/${item.id}', '_blank')">
-                            <div class="details">
-                                <h4>${item.name || 'Untitled'}</h4>
-                                <p>Duration: ${item.duration || 'N/A'}</p>
-                            </div>
+                            <h4>${item.name || 'Untitled Lecture'}</h4>
+                            <p>Duration: ${item.duration || 'N/A'}</p>
                         </div>
                     `).join('');
                 } else {
-                    container.innerHTML = "<h3>No lectures found</h3>";
+                    container.innerHTML = "<h3>No lectures found.</h3>";
                 }
             } catch (err) {
-                document.getElementById('loadingScreen').innerText = "Error: " + err.message;
+                document.getElementById('loadingScreen').innerText = "Error loading data: " + err.message;
             }
         }
-        loadLectures();
+        init();
     </script>
 </body>
 </html>
