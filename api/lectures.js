@@ -11,7 +11,7 @@ export default async function handler(req, res) {
 
     const { batchId, subjectId, tag, contentType, page } = req.query;
 
-    const targetUrl = `https://thestudyspark.site/api-server/v2/batches/${batchId}/subject/${subjectId}/content?page=${page || 1}&contentType=${contentType}&topic=${topicId || ''}`;
+    const targetUrl = `https://thestudyspark.site/api-server/v2/batches/${batchId}/subject/${subjectId}/content?page=${page || 1}&contentType=${contentType} || ''}`;
 
     try {
         const response = await fetch(targetUrl, {
