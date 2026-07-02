@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     }
 
     try {
-        const targetUrl = `https://eduvibe-pw-api.wasmer.app/chapters.php?batch_id=${encodeURIComponent(batch_id)}&subject_id=${encodeURIComponent(subject_id)}`;
+        const targetUrl = `https://thestudyspark.site/batch/${batchId}/subject/${subjectId}/topic/${topicId}`;
 
         const response = await fetch(targetUrl, {
             headers: {
