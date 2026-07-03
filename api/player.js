@@ -8,19 +8,20 @@ export default async function handler(req, res) {
         return res.status(200).end();
     }
 
-    // 2. Query Parameters (batchId aur lectureId jo aapne pehle maange the)
+    // 2. Query Parameters
     const { batchId, lectureId } = req.query;
 
     // 3. Validation
     if (!batchId || !lectureId) {
         return res.status(400).json({ 
-            error: "Missing required parameters: batchId and lectureId are required." 
+            error: "Missing required parameters: batchId and lectureId are required.",
+            poweredBy: "The DevCoderZ"
         });
     }
 
     try {
-        // 4. Target URL (Aapki pehli wali API)
-        const targetUrl = `https://pw.modgalaxy.in/video-api?batchId=${encodeURIComponent(batchId)}&lectureId=${encodeURIComponent(lectureId)}`;
+        // 4. Target URL
+        const targetUrl = `https://ayush-mirror.vercel.app/api/get-video-url?batchId=${encodeURIComponent(batchId)}&childId=${encodeURIComponent(lectureId)}`;
 
         // 5. Fetch Request
         const response = await fetch(targetUrl, {
@@ -36,13 +37,18 @@ export default async function handler(req, res) {
 
         const data = await response.json();
 
-        return res.status(200).json(data);
+        // 6. Return response with attribution
+        return res.status(200).json({
+            ...data,
+            poweredBy: "The DevCoderZ"
+        });
 
     } catch (error) {
         console.error("Proxy Error:", error);
         return res.status(500).json({ 
             error: "Failed to fetch data.", 
-            details: error.message 
+            details: error.message,
+            poweredBy: "The DevCoderZ"
         });
     }
 }
