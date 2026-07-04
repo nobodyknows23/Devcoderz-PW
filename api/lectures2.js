@@ -1,48 +1,45 @@
 export default async function handler(req, res) {
-  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', '*');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
   const { id } = req.query;
+  if (!id) return res.status(400).json({ success: false, message: "ID missing" });
 
-  if (!id) {
-    return res.status(400).json({ 
-      success: false, 
-      message: "ID parameter missing" 
-    });
-  }
-
-  const targetUrl = `https://thestudyspark.site/api-server/v2/videos/get-info?id=${lectureId}`;
+  const url = `https://thestudyspark.site/api-server/v2/videos/get-info?id=${id}`;
 
   try {
-    const response = await fetch(targetUrl, {
+    const response = await fetch(url, {
+      method: 'GET',
       headers: {
         'Referer': 'https://thestudyspark.site/',
         'Origin': 'https://thestudyspark.site',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
-        'Accept': 'application/json',
-      },
-      method: 'GET',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Sec-Fetch-Site': 'same-origin',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Dest': 'empty',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
     });
 
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.status}`);
-    }
-
     const data = await response.json();
+    
+    // Agar key ya decryption data aa raha hai to yahan print hoga
+    console.log("API Response:", JSON.stringify(data, null, 2));
+
     res.status(200).json(data);
 
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      success: false,
-      message: "Proxy failed",
-      error: error.message
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ 
+      success: false, 
+      message: "Proxy failed", 
+      error: err.message 
     });
   }
 }
