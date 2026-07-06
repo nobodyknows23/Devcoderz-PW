@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-  const targetUrl = 'https://thestudyspark.site/api-server/v2/batches/698ad3519549b300a5e1cc6a/todays-schedule';
+  const targetUrl = 'https://thestudyspark.site/api-server/v2/batches/${batchId}/todays-schedule';
 
   try {
     const response = await fetch(targetUrl, {
