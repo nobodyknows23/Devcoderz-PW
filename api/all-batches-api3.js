@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-    const { batch_id, subject_id, contentType, topicId } = req.query;
+    const { batchId, subjectId, contentType, topicId } = req.query;
 
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -10,14 +10,14 @@ export default async function handler(req, res) {
         return res.status(200).end();
     }
 
-    if (!batch_id || !subject_id || !contentType || !topicId) {
+    if (!batchId || !subjectId || !contentType || !topicId) {
         return res.status(400).json({ 
             error: "Required parameters missing." 
         });
     }
 
     try {
-        const targetUrl = `https://api.studyspark.study/api/batch/${batch_id}/subject/${subject_id}/contents?page=1&contentType=${contentType}&topicId=${topicId}`;
+        const targetUrl = `https://api.studyspark.study/api/batch/${batchId}/subject/${subjectId}/contents?page=1&contentType=${contentType}&topicId=${topicId}`;
 
         const response = await fetch(targetUrl, {
             headers: {
