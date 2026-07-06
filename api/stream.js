@@ -1,16 +1,19 @@
 export default async function handler(req, res) {
-    const { batch_id, subject_id, topic_id, tab } = req.query;
+  const { batchId, lectureId, subjectId } = req.query;
 
-    const targetUrl = `https://eduvibe-pw-api.wasmer.app/get-lectures.php?batch_id=${encodeURIComponent(batch_id)}&subject_id=${encodeURIComponent(subject_id)}&topic_id=${encodeURIComponent(topic_id)}&tab=${encodeURIComponent(tab)}`;
+  if (!batchId || !lectureId || !subjectId) {
+    return res.status(400).json({ error: "Missing parameters" });
+  }
 
-    try {
-        const response = await fetch(targetUrl);
-        const data = await response.json();
-        
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Content-Type', 'application/json');
-        res.status(200).json(data);
-    } catch (error) {
-        res.status(500).json({ error: "Proxy Failed" });
-    }
+  const targetUrl = `https://pw.modgalaxy.in/api/get-video?batchId=${batchId}&lectureId=${lectureId}&subjectId=${subjectId}`;
+
+  try {
+    const response = await fetch(targetUrl);
+    const data = await response.json();
+    
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.status(200).json(data);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch video data" });
+  }
 }
