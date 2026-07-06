@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-    const { batch_id, subject_id } = req.query;
+    const { batch_id, subject_id, contentType, topicId } = req.query;
 
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -10,14 +10,14 @@ export default async function handler(req, res) {
         return res.status(200).end();
     }
 
-    if (!batch_id || !subject_id) {
+    if (!batch_id || !subject_id || !contentType || !topicId) {
         return res.status(400).json({ 
-            error: "Required identity parameters (batch_id or subject_id) missing." 
+            error: "Required parameters missing." 
         });
     }
 
     try {
-        const targetUrl = `https://api.studyspark.study/api/batch/${batchId}/subject/${subjectId}/topicId/${topicId}`;
+        const targetUrl = `https://api.studyspark.study/api/batch/${batch_id}/subject/${subject_id}/contents?page=1&contentType=${contentType}&topicId=${topicId}`;
 
         const response = await fetch(targetUrl, {
             headers: {
@@ -32,6 +32,6 @@ export default async function handler(req, res) {
 
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ error: "Failed to fetch chapters data securely from core network." });
+        return res.status(500).json({ error: "Failed to fetch data securely from core network." });
     }
-} 
+}
