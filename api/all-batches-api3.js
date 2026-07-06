@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     }
 
     try {
-        const targetUrl = `https://thestudyspark.site/batch/${batchId}/subject/${subjectId}/topicId/${topicId}`;
+        const targetUrl = `https://api.studyspark.study/api/batch/${batchId}/subject/${subjectId}/topicId/${topicId}`;
 
         const response = await fetch(targetUrl, {
             headers: {
