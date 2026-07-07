@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-  const targetUrl = 'https://thestudyspark.site/api-server/v2/batches/${batchId}/todays-schedule';
+  const targetUrl = 'https://learnbyakp.onrender.com/api/penpencil/v1/batches/${batchId}/todays-schedule';
 
   try {
     const response = await fetch(targetUrl, {
