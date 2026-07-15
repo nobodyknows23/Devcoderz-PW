@@ -10,7 +10,6 @@
   </style>
 </head>
 <body>
-
 <div id="status">Initializing...</div>
 <video id="video" controls autoplay></video>
 
@@ -19,33 +18,31 @@
   const video = document.getElementById('video');
 
   async function initPlayer() {
-    const params = new URLSearchParams(window.location.search);
-    const apiUrl = `https://devcoderz-api.vercel.app/api/video?${params.toString()}`;
-
     try {
+      const params = new URLSearchParams(window.location.search);
+      const apiUrl = `https://devcoderz-api.vercel.app/api/video?${params.toString()}`;
+
       status.innerText = "Fetching API data...";
       const res = await fetch(apiUrl);
       const data = await res.json();
-      
       status.innerText = "URL mila";
-      
+
       const player = new shaka.Player(video);
-      
+
+      player.getNetworkingEngine().registerRequestFilter((type, request) => {
+        request.headers['Referer'] = 'https://' + window.location.host + '/';
+      });
+
       player.configure({
-        drm: {
-          clearKeys: data.clearKeys
-        },
-        manifest: {
-          retryParameters: { maxAttempts: 3, baseDelay: 1000 }
-        }
+        drm: { clearKeys: data.clearKeys }
       });
 
       status.innerText = "Key fetch aur player loading...";
       await player.load(data.manifestUrl);
       status.innerText = "Player loaded";
     } catch (e) {
-      status.innerText = "Error 1002: Check network/permissions. " + e.message;
-      console.error(e);
+      status.innerText = "Error 1002: " + e.message;
+      console.error("Shaka Error Details:", e);
     }
   }
 
