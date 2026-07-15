@@ -1,69 +1,65 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lectures</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .notes-card { background: white; padding: 1rem; margin-bottom: 0.75rem; border-radius: 0.75rem; border: 1px solid #f3f4f6; display: flex; align-items: center; gap: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .notes-view-btn { background: #4f46e5; color: white; padding: 0.4rem 0.8rem; border-radius: 0.5rem; font-size: 0.8rem; font-weight: bold; cursor: pointer; }
-    </style>
+  <meta charset="utf-8">
+  <title>Shaka Player</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/shaka-player.compiled.js"></script>
+  <style>
+    body { margin: 0; background: #000; color: #fff; font-family: sans-serif; }
+    #video-container { width: 100%; height: 90vh; }
+    #status { padding: 10px; font-size: 14px; color: #0f0; }
+  </style>
 </head>
-<body class="bg-gray-50 pb-16">
-    <nav class="h-16 bg-white border-b flex items-center px-4 sticky top-0 z-20">
-        <button onclick="history.back()" class="text-gray-600 font-bold text-sm">← Back</button>
-        <h1 class="ml-4 font-bold text-gray-800">Content</h1>
-    </nav>
-    <div id="tabsContainer" class="flex gap-2 p-4 overflow-x-auto bg-white border-b sticky top-16 z-10">
-        <button onclick="loadContent('videos', this)" class="tab-btn px-4 py-2 rounded-full bg-indigo-600 text-white text-sm font-bold">Lectures</button>
-        <button onclick="loadContent('notes', this)" class="tab-btn px-4 py-2 rounded-full bg-white border text-sm font-bold">Notes</button>
-        <button onclick="loadContent('DppNotes', this)" class="tab-btn px-4 py-2 rounded-full bg-white border text-sm font-bold">DPP</button>
-    </div>
-    <div id="contentContainer" class="p-4"></div>
+<body>
 
-    <script>
-        const params = new URLSearchParams(window.location.search);
-        const bId = params.get("batchId");
-        const sId = params.get("subjectId");
-        const chapterSlug = params.get("chapterSlug");
+<div id="status">Initializing...</div>
+<div id="video-container">
+  <video id="video" width="100%" height="100%" controls autoplay></video>
+</div>
 
-        async function loadContent(tab, btn) {
-            document.querySelectorAll('.tab-btn').forEach(b => {
-                b.classList.remove('bg-indigo-600', 'text-white');
-                b.classList.add('bg-white', 'border');
-            });
-            if(btn) { btn.classList.add('bg-indigo-600', 'text-white'); btn.classList.remove('bg-white', 'border'); }
+<script>
+  const statusDiv = document.getElementById('status');
+  const video = document.getElementById('video');
 
-            const container = document.getElementById('contentContainer');
-            container.innerHTML = '<div class="text-center mt-10">Loading...</div>';
+  function getApiUrlFromParams() {
+    const params = new URLSearchParams(window.location.search);
+    const batchId = params.get('batch_id');
+    const subjectId = params.get('subject_id');
+    const videoId = params.get('video_id');
+    const title = params.get('title');
 
-            try {
-                const url = `https://DevCoderZ-player.vercel.app/api/lectures.js?batchId=${bId}&subjectId=${sId}&tag=${chapterSlug}&contentType=${tab}`;
-                const res = await fetch(url);
-                const json = await res.json();
+    return `https://devcoderz-api.vercel.app/api/video?batch_id=${batchId}&subject_id=${subjectId}&video_id=${videoId}&video_type=new&title=${encodeURIComponent(title)}`;
+  }
 
-                let htmlContent = '';
-                if (json.data && json.data.length > 0) {
-                    json.data.forEach(item => {
-                        htmlContent += `
-                            <div class="notes-card">
-                                <div class="flex-1">
-                                    <h3 class="font-bold text-sm text-gray-800">${item.topic}</h3>
-                                    <p class="text-xs text-gray-500 mt-1">${item.videoDetails?.duration || ''}</p>
-                                </div>
-                                <button class="notes-view-btn" onclick="window.location.href='player.html?lectureId=${item._id}&batchId=${bId}'">View</button>
-                            </div>`;
-                    });
-                } else {
-                    htmlContent = '<div class="text-center mt-10 text-gray-500">No content found</div>';
-                }
-                container.innerHTML = htmlContent;
-            } catch (e) {
-                container.innerHTML = `<div class="text-center mt-10 text-red-500">Error: ${e.message}</div>`;
-            }
+  async function initPlayer() {
+    try {
+      const apiUrl = getApiUrlFromParams();
+      statusDiv.innerText = "Fetching API data...";
+      
+      const response = await fetch(apiUrl);
+      const data = await response.json();
+      
+      statusDiv.innerText = "URL mila";
+      
+      const player = new shaka.Player(video);
+      
+      player.configure({
+        drm: {
+          clearKeys: data.clearKeys
         }
-        loadContent('videos', document.querySelector('.tab-btn'));
-    </script>
+      });
+
+      statusDiv.innerText = "Key fetch aur player loading...";
+
+      await player.load(data.manifestUrl);
+      statusDiv.innerText = "Player loaded";
+    } catch (e) {
+      statusDiv.innerText = "Error: " + e.message;
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', initPlayer);
+</script>
+
 </body>
 </html>
