@@ -2,64 +2,54 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Shaka Player</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/shaka-player.compiled.js"></script>
   <style>
     body { margin: 0; background: #000; color: #fff; font-family: sans-serif; }
-    #video-container { width: 100%; height: 90vh; }
-    #status { padding: 10px; font-size: 14px; color: #0f0; }
+    #video { width: 100%; height: 90vh; }
+    #status { padding: 10px; color: #0f0; }
   </style>
 </head>
 <body>
 
 <div id="status">Initializing...</div>
-<div id="video-container">
-  <video id="video" width="100%" height="100%" controls autoplay></video>
-</div>
+<video id="video" controls autoplay></video>
 
 <script>
-  const statusDiv = document.getElementById('status');
+  const status = document.getElementById('status');
   const video = document.getElementById('video');
 
-  function getApiUrlFromParams() {
-    const params = new URLSearchParams(window.location.search);
-    const batchId = params.get('batch_id');
-    const subjectId = params.get('subject_id');
-    const videoId = params.get('video_id');
-    const title = params.get('title');
-
-    return `https://devcoderz-api.vercel.app/api/video?batch_id=${batchId}&subject_id=${subjectId}&video_id=${videoId}&video_type=new&title=${encodeURIComponent(title)}`;
-  }
-
   async function initPlayer() {
+    const params = new URLSearchParams(window.location.search);
+    const apiUrl = `https://devcoderz-api.vercel.app/api/video?${params.toString()}`;
+
     try {
-      const apiUrl = getApiUrlFromParams();
-      statusDiv.innerText = "Fetching API data...";
+      status.innerText = "Fetching API data...";
+      const res = await fetch(apiUrl);
+      const data = await res.json();
       
-      const response = await fetch(apiUrl);
-      const data = await response.json();
-      
-      statusDiv.innerText = "URL mila";
+      status.innerText = "URL mila";
       
       const player = new shaka.Player(video);
       
       player.configure({
         drm: {
           clearKeys: data.clearKeys
+        },
+        manifest: {
+          retryParameters: { maxAttempts: 3, baseDelay: 1000 }
         }
       });
 
-      statusDiv.innerText = "Key fetch aur player loading...";
-
+      status.innerText = "Key fetch aur player loading...";
       await player.load(data.manifestUrl);
-      statusDiv.innerText = "Player loaded";
+      status.innerText = "Player loaded";
     } catch (e) {
-      statusDiv.innerText = "Error: " + e.message;
+      status.innerText = "Error 1002: Check network/permissions. " + e.message;
+      console.error(e);
     }
   }
 
-  document.addEventListener('DOMContentLoaded', initPlayer);
+  initPlayer();
 </script>
-
 </body>
 </html>
