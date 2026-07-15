@@ -1,27 +1,20 @@
-export default async function handler(req, res) {
+const axios = require('axios');
+
+module.exports = async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-    if (req.method === 'OPTIONS') return res.status(200).end();
-
-    const { batchId, lectureId } = req.query;
-
-    if (!batchId || !lectureId) {
-        return res.status(400).json({ error: "Missing parameters", poweredBy: "The DevCoderZ" });
-    }
-
+    
+    const { batch_id, subject_id, video_id, video_type, title } = req.query;
+    
+    const vidcloudBase = "https://vidcloud.eu.org/play.php";
+    const params = new URLSearchParams({ batch_id, subject_id, video_id, video_type, title });
+    const targetUrl = `${vidcloudBase}?${params.toString()}`;
+    
+    const renderUrl = `https://rangexcoder-backend.onrender.com/api/test-scrape-vidcloud?url=${encodeURIComponent(targetUrl)}&authToken=&phpSessId=`;
+    
     try {
-        const targetUrl = `https://api.pimaxer.in/v1/videos/video-url-details?parentId={batchId}&childId={lectureId}}`;
-        const response = await fetch(targetUrl, {
-            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36' }
-        });
-
-        if (!response.ok) throw new Error(`Status ${response.status}`);
-
-        const data = await response.json();
-        return res.status(200).json({ ...data, poweredBy: "The DevCoderZ" });
+        const response = await axios.get(renderUrl);
+        return res.status(200).json(response.data);
     } catch (error) {
-        return res.status(500).json({ error: "Failed", details: error.message, poweredBy: "The DevCoderZ" });
+        return res.status(500).json({ error: "Proxy Failed", details: error.message });
     }
-}
+};
