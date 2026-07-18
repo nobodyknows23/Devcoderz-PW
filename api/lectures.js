@@ -7,23 +7,27 @@ export default async function handler(req, res) {
         return res.status(200).end();
     }
 
-   
     const { batchId, subjectId, topicId, contentType, page } = req.query;
 
-  
     if (!batchId || !subjectId) {
         return res.status(400).json({ error: "Missing required parameters" });
     }
 
-    
-    const targetUrl = `https://pw.modgalaxy.in/api/token-free?type=contents&batchId=${batchId}&subjectId=${subjectId}&topicSlug=${topicId}&contentType=${contentType}&page=${page}`;
+    const targetUrl = `https://pw.modgalaxy.in/api/token-free?type=contents&batchId=${batchId}&subjectId=${subjectId}&topicSlug=${topicId || ''}&contentType=${contentType || 'videos'}&page=${page || 1}`;
 
     try {
         const response = await fetch(targetUrl, {
-            headers: { "User-Agent": "Mozilla/5.0" }
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+                "Referer": "https://pw.live/",
+                "Accept": "application/json"
+            }
         });
 
-       
+        if (response.status === 429) {
+            return res.status(429).json({ error: "Rate limit exceeded. Please try again later." });
+        }
+
         if (!response.ok) {
             throw new Error(`External API responded with status ${response.status}`);
         }
@@ -32,7 +36,6 @@ export default async function handler(req, res) {
         return res.status(200).json(data);
         
     } catch (e) {
-        console.error("Fetch Error:", e); 
         return res.status(500).json({ error: "Internal Server Error", details: e.message });
     }
 }
