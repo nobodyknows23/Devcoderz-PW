@@ -13,7 +13,7 @@ export default async function handler(req, res) {
 
     try {
         // Yahan $ ka use karke dynamic URL construct ho raha hai
-        const rawUrl = `https://api.studyspark.study/api/batch/${batchId}/subject/${subjectId}/contents?page=1&contentType=${contentType}&topicId=${topicId}`;
+        const rawUrl = `https://thestudyspark.site/api-server/v2/batches/${batchId}/subject/${subjectId}/content?page=${page || 1}&contentType=${contentType}&tag=${tag || ''}`;
         
         const targetUrl = `https://pwnewer-2uh.pages.dev/api/pw?url=${encodeURIComponent(rawUrl)}`;
         
