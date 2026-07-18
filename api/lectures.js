@@ -7,7 +7,7 @@ export default async function handler(req, res) {
         return res.status(200).end();
     }
 
-    const { batchId, subjectId, topicId, contentType, page } = req.query;
+    const { batchId, subjectId, topicId, contentType, page, tag } = req.query;
 
     if (!batchId || !subjectId) {
         return res.status(400).json({ error: "Missing required parameters" });
@@ -25,16 +25,16 @@ export default async function handler(req, res) {
         });
 
         if (response.status === 429) {
-            return res.status(429).json({ error: "Rate limit exceeded. Please try again later." });
+            return res.status(429).json({ error: "Rate limit exceeded" });
         }
 
         if (!response.ok) {
-            throw new Error(`External API responded with status ${response.status}`);
+            return res.status(response.status).json({ error: `External API responded with status ${response.status}` });
         }
 
         const data = await response.json();
         return res.status(200).json(data);
-        
+
     } catch (e) {
         return res.status(500).json({ error: "Internal Server Error", details: e.message });
     }
