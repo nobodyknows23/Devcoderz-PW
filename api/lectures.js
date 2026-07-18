@@ -16,7 +16,7 @@ export default async function handler(req, res) {
     }
 
     
-    const targetUrl = `https://pw.modgalaxy.in/api/token-free?type=contents&batchId=${batchId}&subjectId=${subjectId}&topicSlug=${topicId || ''}&contentType=${contentType || 'videos'}&page=${page || 1}`;
+    const targetUrl = `https://pw.modgalaxy.in/api/token-free?type=contents&batchId=${batchId}&subjectId=${subjectId}&topicSlug=${topicId}&contentType=${contentType}&page=${page}`;
 
     try {
         const response = await fetch(targetUrl, {
