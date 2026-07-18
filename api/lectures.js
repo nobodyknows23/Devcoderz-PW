@@ -13,7 +13,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Missing required parameters" });
     }
 
-    const targetUrl = `https://pw.modgalaxy.in/api/token-free?type=contents&batchId=${batchId}&subjectId=${subjectId}&topicSlug=${topicId || ''}&contentType=${contentType || 'videos'}&page=${page || 1}`;
+    const targetUrl = `https://thestudyspark.site/api-server/v2/batches/${batchId}/subject/${subjectId}/content?page=${page || 1}&contentType=${contentType}&tag=${tag || ''}`;
 
     try {
         const response = await fetch(targetUrl, {
