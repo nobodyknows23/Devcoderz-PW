@@ -1,20 +1,26 @@
-const axios = require('axios');
+export default async function handler(req, res) {
+    const targetUrl = req.query.url;
 
-module.exports = async (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    
-    const { batch_id, subject_id, video_id, video_type, title } = req.query;
-    
-    const vidcloudBase = "https://vidcloud.eu.org/play.php";
-    const params = new URLSearchParams({ batch_id, subject_id, video_id, video_type, title });
-    const targetUrl = `${vidcloudBase}?${params.toString()}`;
-    
-    const renderUrl = `https://rangexcoder-backend.onrender.com/api/test-scrape-vidcloud?url=${encodeURIComponent(targetUrl)}&authToken=&phpSessId=`;
-    
-    try {
-        const response = await axios.get(renderUrl);
-        return res.status(200).json(response.data);
-    } catch (error) {
-        return res.status(500).json({ error: "Proxy Failed", details: error.message });
+    if (!targetUrl) {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        return res.status(400).json({ error: 'URL parameter is required' });
     }
-};
+
+    try {
+        const scrapeDoToken = '11c63f21b40043bbbe24ee1c179b1b3ede58155df6a';
+        const scrapeUrl = `https://api.scrape.do?token=${scrapeDoToken}&url=${encodeURIComponent(targetUrl)}`;
+
+        const response = await fetch(scrapeUrl);
+
+        const contentType = response.headers.get('content-type') || 'application/octet-stream';
+        const buffer = await response.arrayBuffer();
+
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Content-Type', contentType);
+        return res.status(response.status).send(Buffer.from(buffer));
+
+    } catch (err) {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        return res.status(500).json({ error: err.message });
+    }
+}
