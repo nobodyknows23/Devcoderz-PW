@@ -1,60 +1,134 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/shaka-player.compiled.js"></script>
-  <style>
-    body { margin: 0; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-    #player-container { width: 90%; max-width: 800px; }
-    #status-bar { padding: 15px; background: #1a1a1a; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #0af; }
-    video { width: 100%; border-radius: 8px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Shaka Player with Proxy</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.compiled.js"></script>
+    <style>
+        body {
+            margin: 0;
+            background: #000;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+        .video-container {
+            width: 100%;
+            max-width: 900px;
+        }
+        video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        #status-box {
+            color: #00ffcc;
+            margin-top: 15px;
+            font-size: 13px;
+            text-align: center;
+            padding: 0 20px;
+            max-width: 800px;
+            word-break: break-all;
+        }
+    </style>
 </head>
 <body>
+    <div class="video-container">
+        <video id="videoPlayer" controls autoplay></video>
+        <div id="status-box">Initializing player...</div>
+    </div>
 
-<div id="player-container">
-  <div id="status-bar">Initializing...</div>
-  <video id="video" controls autoplay></video>
-</div>
+    <script>
+        const statusBox = document.getElementById('status-box');
 
-<script>
-  const status = document.getElementById('status-bar');
-  const video = document.getElementById('video');
+        function updateStatus(message, isError = false) {
+            console.log(message);
+            statusBox.style.color = isError ? '#ff4444' : '#00ffcc';
+            statusBox.innerText = message;
+        }
 
-  function log(msg) { status.innerText = msg; }
+        async function initApp() {
+            try {
+                shaka.polyfill.installAll();
+                if (!shaka.Player.isBrowserSupported()) {
+                    updateStatus('Error: Browser not supported!', true);
+                    return;
+                }
 
-  async function initPlayer() {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      log("Fetching video info...");
-      
-      const res = await fetch(`https://devcoderz-api.vercel.app/api/video?${params.toString()}`);
-      const data = await res.json();
-      
-      log("URL mila: " + data.manifestUrl.substring(0, 15) + "...");
-      
-      const player = new shaka.Player(video);
+                const urlParams = new URLSearchParams(window.location.search);
+                const batchId = urlParams.get('batchId');
+                const subjectId = urlParams.get('subjectId');
+                const scheduleId = urlParams.get('scheduleId');
 
-      // Sabse important part: Headers ko spoof karna
-      player.getNetworkingEngine().registerRequestFilter((type, request) => {
-        request.headers['Referer'] = 'https://cloudfront.testwave.cc/';
-        request.headers['Origin'] = 'https://cloudfront.testwave.cc';
-        request.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-      });
+                if (!batchId || !subjectId || !scheduleId) {
+                    updateStatus('Error: Missing URL parameters (batchId, subjectId, scheduleId)', true);
+                    return;
+                }
 
-      player.configure({
-        drm: { clearKeys: data.clearKeys }
-      });
+                updateStatus('Fetching video details from API...');
+                const timestamp = new Date().getTime();
+                const apiUrl = `https://brainboxinstitute.in/api/video-url?batchId=${batchId}&subjectId=${subjectId}&scheduleId=${scheduleId}&t=${timestamp}`;
 
-      log("Key fetch aur Player load ho raha hai...");
-      await player.load(data.manifestUrl);
-      log("Player loaded successfully!");
-    } catch (e) {
-      log("Error: " + e.message);
-    }
-  }
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    throw new Error(`API HTTP Error Status: ${response.status}`);
+                }
 
-  initPlayer();
-</script>
+                const data = await response.json();
+                if (!data.success || !data.video_data) {
+                    throw new Error('Invalid API response structure');
+                }
+
+                let rawManifestUrl = data.video_data.url.replace('https://streamvideo.co.in/play/', 'https://cloudfront.testwave.cc/');
+                if (rawManifestUrl.startsWith('//')) {
+                    rawManifestUrl = 'https:' + rawManifestUrl;
+                } else if (!rawManifestUrl.startsWith('http://') && !rawManifestUrl.startsWith('https://')) {
+                    rawManifestUrl = 'https://' + rawManifestUrl;
+                }
+
+                const rawKey = data.video_data.keys && data.video_data.keys[0];
+
+                if (!rawManifestUrl || !rawKey) {
+                    throw new Error('Manifest URL or DRM keys missing in response');
+                }
+
+                const proxyManifestUrl = '/api/player?url=' + encodeURIComponent(rawManifestUrl);
+                updateStatus(`Loading Proxy URL: ${proxyManifestUrl}`);
+
+                const video = document.getElementById('videoPlayer');
+                const player = new shaka.Player(video);
+
+                player.addEventListener('error', (event) => {
+                    const errDetail = event.detail;
+                    const errCode = errDetail ? errDetail.code : 'Unknown';
+                    const errCategory = errDetail ? errDetail.category : 'Unknown';
+                    const errData = errDetail && errDetail.data ? JSON.stringify(errDetail.data) : '';
+                    updateStatus(`Shaka Player Error -> Code: ${errCode}, Category: ${errCategory} | Data: ${errData}`, true);
+                });
+
+                const [keyId, key] = rawKey.split(':');
+                player.configure({
+                    drm: {
+                        clearKeys: {
+                            [keyId]: key
+                        }
+                    }
+                });
+
+                await player.load(proxyManifestUrl);
+                updateStatus('Success: Video loaded and playing successfully!');
+            } catch (e) {
+                const errorMsg = (e && e.message) ? e.message : JSON.stringify(e);
+                updateStatus(`Critical Error: ${errorMsg}`, true);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
 </body>
 </html>
