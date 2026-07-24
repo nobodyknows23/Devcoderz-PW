@@ -1,808 +1,358 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lecture Player — Darzwallah</title>
-    <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.ui.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/controls.min.css">
     <style>
-        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        :root {
-            --primary: #6C5CE7;
-            --primary-light: #a29bfe;
-            --bg-dark: #0a0a0f;
-            --bg-card: #12121a;
-            --bg-controls: rgba(10, 10, 15, 0.92);
-            --text: #ffffff;
-            --text-muted: #8b8b9e;
-            --accent: #00cec9;
-            --danger: #ff4757;
-            --success: #2ed573;
-            --gradient: linear-gradient(135deg, #6C5CE7, #00cec9);
+        body { margin: 0; background: #000; }
+        #video { width: 100%; max-height: 100vh; }
+        #loading { 
+            position: fixed; 
+            top: 50%; left: 50%; 
+            transform: translate(-50%, -50%);
+            color: white;
+            font-family: Arial;
         }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        #loadingScreen {
+        #error {
             position: fixed;
-            inset: 0;
-            background: var(--bg-dark);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            transition: opacity 0.5s ease;
-        }
-        #loadingScreen.hidden { opacity: 0; pointer-events: none; }
-
-        .loader-ring {
-            width: 70px; height: 70px;
-            border: 4px solid rgba(108, 92, 231, 0.15);
-            border-top: 4px solid var(--primary);
-            border-radius: 50%;
-            animation: spin 0.9s linear infinite;
-            margin-bottom: 24px;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        .loader-text {
-            font-size: 15px;
-            color: var(--text-muted);
-            letter-spacing: 1px;
-        }
-        .loader-text span { color: var(--primary-light); font-weight: 600; }
-
-        .player-page {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .top-bar {
-            background: var(--bg-card);
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-            padding: 12px 20px;
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            z-index: 100;
-        }
-        .top-bar .logo {
-            background: var(--gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: 800;
-            font-size: 20px;
-        }
-        .top-bar .lecture-title {
-            font-size: 14px;
-            color: var(--text-muted);
-            font-weight: 500;
-            flex: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .video-wrapper {
-            position: relative;
-            width: 100%;
-            flex: 1;
-            background: #000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        video {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            display: block;
-            background: #000;
-        }
-
-        .controls-wrapper {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            z-index: 50;
-            background: linear-gradient(transparent, rgba(0,0,0,0.85));
-            padding: 40px 0 0 0;
-            transition: opacity 0.35s ease;
-        }
-        .controls-wrapper.hidden { opacity: 0; pointer-events: none; }
-
-        .ctrl-btn {
-            background: none;
-            border: none;
-            color: #fff;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: background 0.2s;
-            font-size: 17px;
-        }
-        .ctrl-btn:hover { background: rgba(255,255,255,0.1); }
-
-        .progress-container {
-            padding: 0 16px;
-            margin-bottom: 6px;
-            cursor: pointer;
-        }
-        .progress-bar-bg {
-            width: 100%;
-            height: 4px;
-            background: rgba(255,255,255,0.15);
-            border-radius: 4px;
-            position: relative;
-        }
-        .progress-fill {
-            position: absolute;
-            top: 0; left: 0;
-            height: 100%;
-            background: var(--gradient);
-            border-radius: 4px;
-            pointer-events: none;
-        }
-        .progress-buffered {
-            position: absolute;
-            top: 0; left: 0;
-            height: 100%;
-            background: rgba(255,255,255,0.2);
-            border-radius: 4px;
-            pointer-events: none;
-        }
-
-        .controls-row {
-            display: flex;
-            align-items: center;
-            padding: 6px 12px 10px;
-            gap: 4px;
-        }
-
-        .time-display {
-            font-size: 12px;
-            color: rgba(255,255,255,0.75);
-            font-weight: 500;
-            padding: 0 6px;
-            white-space: nowrap;
-        }
-
-        .spacer { flex: 1; }
-
-        .speed-badge {
-            font-size: 11px;
-            font-weight: 700;
-            background: rgba(108, 92, 231, 0.2);
-            color: var(--primary-light);
-            padding: 2px 7px;
-            border-radius: 5px;
-            min-width: 28px;
-            text-align: center;
-        }
-
-        .speed-menu, .quality-menu {
-            position: absolute;
-            bottom: 52px;
-            right: 0;
-            background: var(--bg-card);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 12px;
-            padding: 8px 0;
-            min-width: 140px;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ff4444;
+            font-family: Arial;
             display: none;
-            z-index: 100;
-            box-shadow: 0 12px 40px rgba(0,0,0,0.5);
-        }
-        .speed-menu.show, .quality-menu.show { display: block; }
-
-        .speed-menu-item, .quality-menu-item {
-            padding: 10px 18px;
-            font-size: 13px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            color: var(--text-muted);
-        }
-        .speed-menu-item:hover, .quality-menu-item:hover { background: rgba(255,255,255,0.05); }
-        .speed-menu-item.active, .quality-menu-item.active {
-            color: var(--primary-light);
-            font-weight: 600;
-        }
-
-        .bottom-info {
-            background: var(--bg-card);
-            border-top: 1px solid rgba(255,255,255,0.06);
-            padding: 16px 20px;
-        }
-        .info-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-        .info-chip {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(255,255,255,0.04);
-            padding: 6px 14px;
-            border-radius: 8px;
-            font-size: 12px;
-            color: var(--text-muted);
-        }
-
-        #errorScreen {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: var(--bg-dark);
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 9998;
-            padding: 20px;
             text-align: center;
-        }
-        #errorScreen i { font-size: 52px; color: var(--danger); margin-bottom: 20px; }
-        #errorScreen h2 { font-size: 22px; margin-bottom: 10px; }
-        #errorScreen p { color: var(--text-muted); font-size: 14px; max-width: 400px; margin-bottom: 24px; }
-        #retryBtn {
-            background: var(--gradient);
-            border: none;
-            color: #fff;
-            padding: 12px 32px;
-            border-radius: 10px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        @media (max-width: 640px) {
-            .controls-row { padding: 4px 8px 8px; gap: 0; }
-            .ctrl-btn { width: 36px; height: 36px; font-size: 15px; }
-            .time-display { font-size: 11px; padding: 0 4px; }
         }
     </style>
 </head>
 <body>
-
-<!-- Loading Screen -->
-<div id="loadingScreen">
-    <div class="loader-ring"></div>
-    <div class="loader-text">Loading <span>Lecture</span>...</div>
-</div>
-
-<!-- Error Screen -->
-<div id="errorScreen">
-    <i class="fas fa-exclamation-triangle"></i>
-    <h2>Unable to Load Video</h2>
-    <p id="errorMsg">Something went wrong</p>
-    <button id="retryBtn" onclick="initPlayer()"><i class="fas fa-redo"></i> Retry</button>
-</div>
-
-<!-- Player -->
-<div class="player-page" id="playerPage" style="display:none;">
-    <div class="top-bar">
-        <div class="logo">Darzwallah</div>
-        <div class="lecture-title" id="lectureTitle">Lecture Player</div>
+    <div id="loading">Loading lecture...</div>
+    <div id="error">
+        <h2>❌ Failed to Load Video</h2>
+        <p id="errorMsg">Something went wrong</p>
+        <button onclick="location.reload()">Retry</button>
     </div>
+    <video id="video" autoplay controls style="width:100%; height:100vh;"></video>
 
-    <div class="video-wrapper" id="videoWrapper">
-        <video id="videoPlayer" playsinline></video>
-
-        <div class="controls-wrapper" id="controlsWrapper">
-            <div class="progress-container" id="progressContainer">
-                <div class="progress-bar-bg">
-                    <div class="progress-buffered" id="progressBuffered"></div>
-                    <div class="progress-fill" id="progressFill"></div>
-                </div>
-            </div>
-            <div class="controls-row">
-                <button class="ctrl-btn" id="playBtn" onclick="togglePlay()"><i class="fas fa-play"></i></button>
-                <button class="ctrl-btn" onclick="skip(-10)"><i class="fas fa-backward"></i></button>
-                <button class="ctrl-btn" onclick="skip(10)"><i class="fas fa-forward"></i></button>
-                
-                <button class="ctrl-btn" id="muteBtn" onclick="toggleMute()"><i class="fas fa-volume-up"></i></button>
-                <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="1" style="width:80px; height:4px; -webkit-appearance:none; background:rgba(255,255,255,0.2); border-radius:4px;">
-                
-                <div class="time-display">
-                    <span id="currentTime">0:00</span> / <span id="duration">0:00</span>
-                </div>
-                
-                <div class="spacer"></div>
-                
-                <div style="position:relative;">
-                    <button class="ctrl-btn" id="speedBtn" onclick="toggleSpeedMenu()">
-                        <span class="speed-badge" id="speedBadge">1x</span>
-                    </button>
-                    <div class="speed-menu" id="speedMenu"></div>
-                </div>
-                
-                <div style="position:relative;">
-                    <button class="ctrl-btn" id="qualityBtn" onclick="toggleQualityMenu()"><i class="fas fa-cog"></i></button>
-                    <div class="quality-menu" id="qualityMenu"></div>
-                </div>
-                
-                <button class="ctrl-btn" id="fsBtn" onclick="toggleFullscreen()"><i class="fas fa-expand"></i></button>
-            </div>
-        </div>
-    </div>
-
-    <div class="bottom-info">
-        <div class="info-row">
-            <div class="info-chip"><i class="fas fa-play-circle"></i><span>DASH Stream</span></div>
-            <div class="info-chip" id="qualityChip"><i class="fas fa-signal"></i><span>Auto Quality</span></div>
-            <div class="info-chip" id="drmStatus"><i class="fas fa-lock"></i><span>🔓 No DRM</span></div>
-        </div>
-    </div>
-</div>
-
-<script>
-// ========== CONFIGURATION ==========
-const VIDEO_API_URL = 'https://darzwallah-playerv1.vercel.app/api/lectures?batchId=69047c05fc3bb2dd64711bd8&subjectId=physics-145369&tag=693c7c32083455818e97dd6e&page=1&contentType=videos';
-
-// ========== GLOBALS ==========
-let player = null;
-let video = null;
-let currentSpeed = 1;
-const speeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
-let controlsTimeout = null;
-
-// ========== DOM HELPERS ==========
-const $ = id => document.getElementById(id);
-
-// ========== INIT ==========
-window.addEventListener('DOMContentLoaded', initPlayer);
-
-async function initPlayer() {
-    $('loadingScreen').style.display = 'flex';
-    $('errorScreen').style.display = 'none';
-    $('playerPage').style.display = 'none';
-
-    try {
-        // Get URL from query parameter
-        const urlParams = new URLSearchParams(window.location.search);
-        let videoUrl = urlParams.get('url');
+    <script>
+        // ========== CONFIGURATION ==========
+        // Use your actual API endpoints
+        const API_BASE = "https://devcoderz-api.vercel.app";
+        const PROXY_URL = "https://rangexcoder-backend.onrender.com/apiserver/api/pi/play?url=";
         
-        // If URL is provided in query string, use it directly
-        if (videoUrl) {
-            console.log('📺 Loading video from URL parameter:', videoUrl);
-            
-            // Decode the URL
-            videoUrl = decodeURIComponent(videoUrl);
-            
-            // Update title
-            $('lectureTitle').textContent = 'Lecture Video';
-            
-            // Initialize dash.js with the URL
-            setupDashPlayer(videoUrl);
-            
-            // Show player
-            $('loadingScreen').style.display = 'none';
-            $('playerPage').style.display = 'flex';
-            
-            // Build menus
-            buildSpeedMenu();
-            return;
-        }
-        
-        // If no URL in query, fetch from API
-        console.log('📡 No URL in query, fetching from API...');
-        const response = await fetch(VIDEO_API_URL);
-        const data = await response.json();
+        // If you have a separate proxy for CloudFront segments
+        const SEGMENT_PROXY = "https://your-proxy.vercel.app/api/proxy?url=";
 
-        if (!data.success || !data.data || data.data.length === 0) {
-            throw new Error('No lectures found');
-        }
+        // ========== GLOBALS ==========
+        let player = null;
+        const video = document.getElementById('video');
+        const loadingEl = document.getElementById('loading');
+        const errorEl = document.getElementById('error');
+        const errorMsg = document.getElementById('errorMsg');
 
-        const lecture = data.data[0];
-        
-        // Update title
-        $('lectureTitle').textContent = lecture.topic || 'Lecture Video';
-
-        // Get video URL
-        videoUrl = lecture.url || lecture.videoDetails?.videoUrl || lecture.videoUrl;
-
-        if (!videoUrl) {
-            throw new Error('No video URL found in lecture data');
-        }
-
-        // Update DRM status
-        const isDrmProtected = lecture.drmProtected || lecture.videoDetails?.drmProtected || false;
-        const drmChip = $('drmStatus');
-        if (isDrmProtected) {
-            drmChip.innerHTML = `<i class="fas fa-lock"></i><span>🔒 DRM Protected</span>`;
-        } else {
-            drmChip.innerHTML = `<i class="fas fa-lock-open"></i><span>🔓 No DRM</span>`;
-        }
-
-        // Initialize dash.js player
-        setupDashPlayer(videoUrl);
-
-        // Show player
-        $('loadingScreen').style.display = 'none';
-        $('playerPage').style.display = 'flex';
-
-        // Build menus
-        buildSpeedMenu();
-
-    } catch (error) {
-        console.error('Init error:', error);
-        showError(error.message);
-    }
-}
-
-function setupDashPlayer(videoUrl) {
-    video = $('videoPlayer');
-
-    // Destroy existing player
-    if (player) {
-        try { player.destroy(); } catch(e) {}
-        player = null;
-    }
-
-    // Create dash.js player
-    player = dashjs.MediaPlayer().create();
-
-    // Configure for CloudFront signed URLs
-    player.updateSettings({
-        streaming: {
-            abr: {
-                autoSwitchBitrate: { video: true, audio: true }
-            },
-            buffer: {
-                bufferTimeAtTopQuality: 30,
-                fastSwitchEnabled: true
-            },
-            retryAttempts: {
-                MPD: 5,
-                MediaSegment: 5,
-                InitializationSegment: 5
-            },
-            retryIntervals: {
-                MPD: 2000,
-                MediaSegment: 2000
-            }
-        }
-    });
-
-    // Handle errors
-    player.on(dashjs.MediaPlayer.events.ERROR, function(e) {
-        console.error('Dash.js error:', e);
-        if (e.error) {
-            showError('Failed to load video: ' + (e.error.message || 'Unknown error'));
-        }
-    });
-
-    // Stream ready
-    player.on(dashjs.MediaPlayer.events.STREAM_INITIALIZED, function() {
-        console.log('✅ Stream initialized successfully');
-        buildQualityMenu();
-        updateQualityInfo();
-        wireVideoEvents();
-        wireControlEvents();
-    });
-
-    // Quality change
-    player.on(dashjs.MediaPlayer.events.QUALITY_CHANGE_RENDERED, function() {
-        updateQualityInfo();
-        buildQualityMenu();
-    });
-
-    // Initialize with the video URL
-    try {
-        player.initialize(video, videoUrl, false);
-        console.log('🎥 Playing:', videoUrl);
-    } catch (error) {
-        console.error('Failed to initialize player:', error);
-        showError('Failed to load video: ' + error.message);
-    }
-}
-
-// ========== VIDEO EVENTS ==========
-function wireVideoEvents() {
-    if (!video) return;
-
-    video.addEventListener('play', () => {
-        $('playBtn').innerHTML = '<i class="fas fa-pause"></i>';
-        hideControlsAfterDelay();
-    });
-
-    video.addEventListener('pause', () => {
-        $('playBtn').innerHTML = '<i class="fas fa-play"></i>';
-    });
-
-    video.addEventListener('timeupdate', updateProgress);
-    video.addEventListener('progress', updateBuffer);
-    video.addEventListener('loadedmetadata', () => {
-        $('duration').textContent = formatTime(video.duration);
-    });
-
-    video.addEventListener('volumechange', () => {
-        updateVolumeIcon();
-        $('volumeSlider').value = video.muted ? 0 : video.volume;
-    });
-}
-
-// ========== CONTROLS ==========
-function togglePlay() {
-    if (!video) return;
-    if (video.paused) {
-        video.play();
-    } else {
-        video.pause();
-    }
-}
-
-function skip(seconds) {
-    if (!video) return;
-    video.currentTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + seconds));
-}
-
-function toggleMute() {
-    if (!video) return;
-    video.muted = !video.muted;
-}
-
-function updateVolumeIcon() {
-    const btn = $('muteBtn');
-    if (video.muted || video.volume === 0) {
-        btn.innerHTML = '<i class="fas fa-volume-mute"></i>';
-    } else if (video.volume < 0.5) {
-        btn.innerHTML = '<i class="fas fa-volume-down"></i>';
-    } else {
-        btn.innerHTML = '<i class="fas fa-volume-up"></i>';
-    }
-}
-
-function toggleFullscreen() {
-    const wrapper = $('videoWrapper');
-    if (!document.fullscreenElement) {
-        wrapper.requestFullscreen().catch(() => {});
-        $('fsBtn').innerHTML = '<i class="fas fa-compress"></i>';
-    } else {
-        document.exitFullscreen().catch(() => {});
-        $('fsBtn').innerHTML = '<i class="fas fa-expand"></i>';
-    }
-}
-
-// ========== PROGRESS ==========
-function updateProgress() {
-    if (!video || !video.duration) return;
-    const pct = (video.currentTime / video.duration) * 100;
-    $('progressFill').style.width = pct + '%';
-    $('currentTime').textContent = formatTime(video.currentTime);
-}
-
-function updateBuffer() {
-    if (!video || !video.duration || !video.buffered.length) return;
-    const end = video.buffered.end(video.buffered.length - 1);
-    $('progressBuffered').style.width = (end / video.duration * 100) + '%';
-}
-
-function wireControlEvents() {
-    // Volume slider
-    $('volumeSlider').addEventListener('input', e => {
-        if (!video) return;
-        video.volume = parseFloat(e.target.value);
-        video.muted = false;
-    });
-
-    // Progress seeking
-    const pc = $('progressContainer');
-    pc.addEventListener('click', e => {
-        if (!video) return;
-        const rect = pc.getBoundingClientRect();
-        const pct = (e.clientX - rect.left) / rect.width;
-        video.currentTime = pct * video.duration;
-    });
-
-    // Mouse move for controls
-    document.addEventListener('mousemove', () => {
-        $('controlsWrapper').classList.remove('hidden');
-        hideControlsAfterDelay();
-    });
-
-    // Keyboard shortcuts
-    document.addEventListener('keydown', handleKeyboard);
-}
-
-function hideControlsAfterDelay() {
-    clearTimeout(controlsTimeout);
-    if (video && !video.paused) {
-        controlsTimeout = setTimeout(() => {
-            $('controlsWrapper').classList.add('hidden');
-            closeMenus();
-        }, 3000);
-    }
-}
-
-function closeMenus() {
-    $('speedMenu').classList.remove('show');
-    $('qualityMenu').classList.remove('show');
-}
-
-// ========== KEYBOARD ==========
-function handleKeyboard(e) {
-    if (e.target.tagName === 'INPUT') return;
-    
-    switch(e.key) {
-        case ' ':
-        case 'k':
-            e.preventDefault();
-            togglePlay();
-            break;
-        case 'ArrowRight':
-            e.preventDefault();
-            skip(10);
-            break;
-        case 'ArrowLeft':
-            e.preventDefault();
-            skip(-10);
-            break;
-        case 'ArrowUp':
-            e.preventDefault();
-            if (video) {
-                video.volume = Math.min(1, video.volume + 0.1);
-                video.muted = false;
-            }
-            break;
-        case 'ArrowDown':
-            e.preventDefault();
-            if (video) {
-                video.volume = Math.max(0, video.volume - 0.1);
-            }
-            break;
-        case 'm':
-        case 'M':
-            toggleMute();
-            break;
-        case 'f':
-        case 'F':
-            toggleFullscreen();
-            break;
-    }
-}
-
-// ========== SPEED ==========
-function buildSpeedMenu() {
-    const menu = $('speedMenu');
-    menu.innerHTML = '';
-    speeds.forEach(s => {
-        const item = document.createElement('div');
-        item.className = 'speed-menu-item' + (s === currentSpeed ? ' active' : '');
-        item.textContent = s === 1 ? 'Normal' : s + 'x';
-        item.onclick = () => setSpeed(s);
-        menu.appendChild(item);
-    });
-}
-
-function setSpeed(s) {
-    currentSpeed = s;
-    if (video) video.playbackRate = s;
-    $('speedBadge').textContent = s === 1 ? '1x' : s + 'x';
-    buildSpeedMenu();
-    $('speedMenu').classList.remove('show');
-}
-
-function toggleSpeedMenu() {
-    $('qualityMenu').classList.remove('show');
-    $('speedMenu').classList.toggle('show');
-}
-
-// ========== QUALITY ==========
-function buildQualityMenu() {
-    if (!player) return;
-    const menu = $('qualityMenu');
-    menu.innerHTML = '';
-
-    try {
-        const bitrateList = player.getBitrateInfoListFor('video');
-        if (!bitrateList || bitrateList.length === 0) return;
-
-        // Auto option
-        const autoItem = document.createElement('div');
-        autoItem.className = 'quality-menu-item active';
-        autoItem.textContent = 'Auto';
-        autoItem.onclick = () => {
-            player.updateSettings({ streaming: { abr: { autoSwitchBitrate: { video: true } } } });
-            buildQualityMenu();
-            $('qualityMenu').classList.remove('show');
-            updateQualityInfo();
-        };
-        menu.appendChild(autoItem);
-
-        // Sort by height
-        const sorted = [...bitrateList].sort((a, b) => (b.height || 0) - (a.height || 0));
-        sorted.forEach(info => {
-            const item = document.createElement('div');
-            item.className = 'quality-menu-item';
-            const label = info.height ? info.height + 'p' : Math.round(info.bitrate / 1000) + 'k';
-            item.textContent = label;
-            item.onclick = () => {
-                player.updateSettings({ streaming: { abr: { autoSwitchBitrate: { video: false } } } });
-                player.setQualityFor('video', info.qualityIndex);
-                buildQualityMenu();
-                $('qualityMenu').classList.remove('show');
-                updateQualityInfo();
-            };
-            menu.appendChild(item);
+        // ========== INIT ==========
+        document.addEventListener('shaka-ui-loaded', initPlayer);
+        window.addEventListener('load', () => {
+            // If shaka doesn't load, try init anyway
+            setTimeout(initPlayer, 2000);
         });
-    } catch(e) {
-        console.warn('Quality menu error:', e);
-    }
-}
 
-function updateQualityInfo() {
-    if (!player) return;
-    try {
-        const quality = player.getQualityFor('video');
-        const bitrateList = player.getBitrateInfoListFor('video');
-        if (bitrateList && bitrateList[quality]) {
-            const info = bitrateList[quality];
-            const label = info.height ? info.height + 'p' : Math.round(info.bitrate / 1000) + 'k';
-            $('qualityChip').querySelector('span').textContent = label;
-        } else {
-            $('qualityChip').querySelector('span').textContent = 'Auto';
+        async function initPlayer() {
+            try {
+                loadingEl.style.display = 'block';
+                errorEl.style.display = 'none';
+
+                // Get URL parameters
+                const params = new URLSearchParams(window.location.search);
+                
+                // Check if we have a direct URL parameter
+                let directUrl = params.get('url');
+                if (directUrl) {
+                    console.log('📺 Direct URL mode:', directUrl);
+                    await playDirectUrl(directUrl);
+                    return;
+                }
+
+                // Otherwise use API mode
+                const batchId = params.get('batchId');
+                const subjectId = params.get('subjectId');
+                const childId = params.get('childId');
+                const videoId = params.get('videoId');
+
+                if (!batchId || !subjectId || !childId || !videoId) {
+                    throw new Error('Missing required parameters: batchId, subjectId, childId, videoId');
+                }
+
+                console.log('📡 Fetching video URL from API...');
+                
+                // Step 1: Get video URL with signed URL
+                const urlRes = await fetch(`${API_BASE}/api/video-url?batchId=${batchId}&subjectId=${subjectId}&childId=${childId}&videoId=${videoId}`);
+                const urlData = await urlRes.json();
+                
+                if (!urlData.data || !urlData.data.url) {
+                    throw new Error('Failed to get video URL from API');
+                }
+
+                const manifest = urlData.data.url + (urlData.data.signedUrl || '');
+                console.log('📄 Manifest URL:', manifest);
+
+                // Step 2: Get KID from MPD
+                console.log('🔑 Fetching KID...');
+                const kidRes = await fetch(`${API_BASE}/api/key?mpdUrl=${encodeURIComponent(manifest)}`);
+                const kidData = await kidRes.json();
+                
+                if (!kidData.kid) {
+                    throw new Error('Failed to get KID from MPD');
+                }
+                console.log('🔑 KID:', kidData.kid);
+
+                // Step 3: Get decryption key
+                console.log('🔐 Fetching decryption key...');
+                const keyRes = await fetch(`${API_BASE}/api/get-otp?kid=${kidData.kid}`);
+                const keyData = await keyRes.json();
+                
+                if (!keyData.key) {
+                    throw new Error('Failed to get decryption key');
+                }
+                console.log('🔐 Key received:', keyData.key.substring(0, 20) + '...');
+
+                // Step 4: Initialize Shaka Player with clear key
+                await initShakaPlayer(manifest, keyData.keyid, keyData.key);
+
+            } catch (error) {
+                console.error('❌ Init error:', error);
+                showError(error.message);
+            }
         }
-    } catch(e) {}
-}
 
-function toggleQualityMenu() {
-    $('speedMenu').classList.remove('show');
-    $('qualityMenu').classList.toggle('show');
-}
+        // ========== DIRECT URL PLAYBACK ==========
+        async function playDirectUrl(url) {
+            try {
+                // Check if it's a signed CloudFront URL
+                const isCloudFront = url.includes('cloudfront.net');
+                const isSigned = url.includes('Signature=') || url.includes('Key-Pair-Id=');
+                
+                if (isCloudFront && !isSigned) {
+                    console.warn('⚠️ Unsigned CloudFront URL detected - may fail');
+                }
 
-// ========== UTILITY ==========
-function formatTime(sec) {
-    if (!sec || isNaN(sec)) return '0:00';
-    sec = Math.floor(sec);
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return m + ':' + String(s).padStart(2, '0');
-}
+                // Try to play directly with Shaka
+                await initShakaPlayer(url, null, null);
+                
+            } catch (error) {
+                console.error('Direct URL playback failed:', error);
+                showError('Failed to play video: ' + error.message);
+            }
+        }
 
-function showError(msg) {
-    $('loadingScreen').style.display = 'none';
-    $('errorScreen').style.display = 'flex';
-    $('errorMsg').textContent = msg;
-}
+        // ========== SHAKA PLAYER INIT ==========
+        async function initShakaPlayer(manifestUrl, keyId, key) {
+            try {
+                // Destroy existing player
+                if (player) {
+                    try { player.destroy(); } catch(e) {}
+                    player = null;
+                }
 
-// Close menus on outside click
-document.addEventListener('click', (e) => {
-    if (!e.target.closest('#speedBtn') && !e.target.closest('#speedMenu')) {
-        $('speedMenu').classList.remove('show');
-    }
-    if (!e.target.closest('#qualityBtn') && !e.target.closest('#qualityMenu')) {
-        $('qualityMenu').classList.remove('show');
-    }
-});
+                // Create new player
+                player = new shaka.Player(video);
+                
+                // ========== FIX 1: Networking Engine with Proxy Support ==========
+                const networkingEngine = player.getNetworkingEngine();
+                
+                // Add request filters for CORS and headers
+                networkingEngine.registerRequestFilter((type, request) => {
+                    // Allow cross-origin credentials
+                    request.allowCrossSiteCredentials = true;
+                    
+                    // Add proper headers for CloudFront
+                    request.headers['Accept'] = '*/*';
+                    request.headers['Origin'] = window.location.origin;
+                    request.headers['Referer'] = window.location.href;
+                    
+                    // If it's a CloudFront request, add cookie for authentication
+                    if (request.uris && request.uris[0] && request.uris[0].includes('cloudfront.net')) {
+                        request.headers['Cookie'] = document.cookie || '';
+                    }
+                });
 
-// Fullscreen change events
-document.addEventListener('fullscreenchange', () => {
-    if (!document.fullscreenElement) {
-        $('fsBtn').innerHTML = '<i class="fas fa-expand"></i>';
-    }
-});
-</script>
+                // ========== FIX 2: Response Filter to Rewrite Segment URLs ==========
+                networkingEngine.registerResponseFilter((type, response) => {
+                    // Only process manifest files
+                    if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST) {
+                        try {
+                            // Parse the MPD XML
+                            const text = new TextDecoder('utf-8').decode(response.data);
+                            
+                            // Check if it's an MPD file
+                            if (text.includes('<MPD') || text.includes('<Period')) {
+                                // Rewrite segment URLs to go through proxy if needed
+                                // This helps with CORS issues
+                                const modifiedText = text.replace(
+                                    /https:\/\/d1d34p8vz63oiq\.cloudfront\.net\/[^"'\s<>]+\.m4s/g,
+                                    (match) => {
+                                        // If you have a segment proxy, use it
+                                        if (SEGMENT_PROXY) {
+                                            return SEGMENT_PROXY + encodeURIComponent(match);
+                                        }
+                                        // Otherwise keep original
+                                        return match;
+                                    }
+                                );
+                                
+                                if (modifiedText !== text) {
+                                    console.log('🔄 Rewrote segment URLs in MPD');
+                                    response.data = new TextEncoder().encode(modifiedText);
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('Failed to process MPD response:', e);
+                        }
+                    }
+                });
+
+                // ========== FIX 3: DRM Configuration with Clear Keys ==========
+                const config = {
+                    streaming: {
+                        ignoreTextStreamFailures: true,
+                        alwaysStreamText: false,
+                        retryParameters: {
+                            maxAttempts: 5,
+                            baseDelay: 1000,
+                            backoffFactor: 2
+                        }
+                    },
+                    manifest: {
+                        retryParameters: {
+                            maxAttempts: 5,
+                            baseDelay: 1000,
+                            backoffFactor: 2
+                        }
+                    }
+                };
+
+                // Add clear keys if provided
+                if (keyId && key) {
+                    config.drm = {
+                        clearKeys: {
+                            [keyId]: key
+                        }
+                    };
+                    console.log('🔐 Clear key configured for KID:', keyId);
+                } else {
+                    // Try without DRM (for non-encrypted content)
+                    config.drm = {
+                        clearKeys: {}
+                    };
+                    console.log('🔓 No DRM - attempting direct playback');
+                }
+
+                player.configure(config);
+
+                // ========== FIX 4: Error Handling ==========
+                player.addEventListener('error', (event) => {
+                    console.error('Shaka Player Error:', event.detail);
+                    const error = event.detail;
+                    
+                    // Try to recover from common errors
+                    if (error.category === 'NETWORK' && error.code === 401) {
+                        showError('Authentication failed. Please refresh and try again.');
+                    } else if (error.category === 'DRM') {
+                        showError('DRM error: ' + (error.message || 'Failed to decrypt video'));
+                    } else {
+                        showError('Player error: ' + (error.message || 'Unknown error'));
+                    }
+                });
+
+                // Log important events
+                player.addEventListener('manifestparsed', () => {
+                    console.log('✅ Manifest parsed successfully');
+                });
+
+                player.addEventListener('trackschanged', () => {
+                    console.log('🔄 Tracks changed');
+                });
+
+                // ========== FIX 5: Load with Proxy ==========
+                // Use proxy URL for manifest to avoid CORS issues
+                let loadUrl = manifestUrl;
+                
+                // If it's a CloudFront URL without proxy, use the proxy
+                if (manifestUrl.includes('cloudfront.net') && !manifestUrl.includes(PROXY_URL)) {
+                    loadUrl = PROXY_URL + encodeURIComponent(manifestUrl);
+                    console.log('🔄 Using proxy for manifest:', loadUrl);
+                }
+
+                // Load the video
+                await player.load(loadUrl);
+                console.log('✅ Video loaded successfully');
+
+                // Auto-play
+                try {
+                    await video.play();
+                } catch (e) {
+                    console.log('Auto-play blocked, waiting for user interaction');
+                }
+
+                loadingEl.style.display = 'none';
+
+                // ========== FIX 6: Handle fullscreen ==========
+                document.addEventListener('fullscreenchange', () => {
+                    if (document.fullscreenElement) {
+                        video.style.height = '100vh';
+                    }
+                });
+
+            } catch (error) {
+                console.error('❌ Shaka init error:', error);
+                throw error;
+            }
+        }
+
+        // ========== UTILITY FUNCTIONS ==========
+        function showError(msg) {
+            loadingEl.style.display = 'none';
+            errorEl.style.display = 'block';
+            errorMsg.textContent = msg;
+            console.error('Error:', msg);
+        }
+
+        // ========== KEYBOARD SHORTCUTS ==========
+        document.addEventListener('keydown', (e) => {
+            if (!video) return;
+            
+            switch(e.key) {
+                case ' ':
+                case 'k':
+                    e.preventDefault();
+                    video.paused ? video.play() : video.pause();
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    video.currentTime += 10;
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    video.currentTime -= 10;
+                    break;
+                case 'f':
+                case 'F':
+                    if (!document.fullscreenElement) {
+                        document.documentElement.requestFullscreen();
+                    } else {
+                        document.exitFullscreen();
+                    }
+                    break;
+            }
+        });
+
+        // Handle visibility change for better performance
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && video) {
+                video.pause();
+            }
+        });
+
+        console.log('🎯 Player initialized with fixes');
+    </script>
 </body>
 </html>
