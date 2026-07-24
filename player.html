@@ -2,193 +2,211 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shaka Player with CloudFront Proxy</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.compiled.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lecture Player</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.9/shaka-player.compiled.js"></script>
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            margin: 0;
             background: #000;
             color: #fff;
+            font-family: Arial, sans-serif;
+            height: 100vh;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            font-family: Arial, sans-serif;
         }
         .video-container {
             width: 100%;
-            max-width: 900px;
+            max-width: 1200px;
+            position: relative;
         }
         video {
             width: 100%;
-            height: auto;
+            height: 100vh;
             display: block;
             background: #000;
         }
-        #status-box {
-            color: #00ffcc;
-            margin-top: 15px;
-            font-size: 13px;
+        #status {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 100;
             text-align: center;
-            padding: 0 20px;
-            max-width: 800px;
-            word-break: break-all;
+            max-width: 90%;
+            color: #00ffcc;
         }
+        #status.error { color: #ff4444; }
         #controls {
-            margin-top: 10px;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
             display: flex;
             gap: 10px;
-            justify-content: center;
-            flex-wrap: wrap;
+            z-index: 100;
+            background: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border-radius: 10px;
         }
         button {
             background: #333;
             color: #fff;
             border: none;
             padding: 8px 16px;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
+            font-size: 14px;
         }
-        button:hover {
-            background: #555;
+        button:hover { background: #555; }
+        @media (max-width: 640px) {
+            #controls { padding: 8px 12px; gap: 6px; flex-wrap: wrap; justify-content: center; }
+            button { padding: 6px 12px; font-size: 12px; }
         }
     </style>
 </head>
 <body>
+
+    <div id="status">⏳ Initializing player...</div>
     <div class="video-container">
-        <video id="videoPlayer" controls autoplay playsinline></video>
-        <div id="status-box">Initializing player...</div>
-        <div id="controls">
-            <button onclick="togglePlay()">▶️ Play/Pause</button>
-            <button onclick="toggleFullscreen()">⛶ Fullscreen</button>
-        </div>
+        <video id="video" controls autoplay playsinline></video>
+    </div>
+    <div id="controls">
+        <button onclick="togglePlay()">▶️ Play/Pause</button>
+        <button onclick="skip(-10)">⏪ -10s</button>
+        <button onclick="skip(10)">⏩ +10s</button>
+        <button onclick="toggleFullscreen()">⛶ Fullscreen</button>
     </div>
 
     <script>
-        const statusBox = document.getElementById('status-box');
+        // ========== CONFIGURATION ==========
+        const VIDCLOUD_API = 'https://vidcloud.eu.org/play.php';
+        
+        // ========== GLOBALS ==========
         let player = null;
         let video = null;
+        const statusEl = document.getElementById('status');
 
-        function updateStatus(message, isError = false) {
-            console.log(message);
-            statusBox.style.color = isError ? '#ff4444' : '#00ffcc';
-            statusBox.innerText = message;
-        }
-
-        // ========== TOGGLE FUNCTIONS ==========
-        function togglePlay() {
-            if (!video) return;
-            video.paused ? video.play() : video.pause();
-        }
-
-        function toggleFullscreen() {
-            const container = document.querySelector('.video-container');
-            if (!document.fullscreenElement) {
-                container.requestFullscreen?.() || document.documentElement.requestFullscreen?.();
-            } else {
-                document.exitFullscreen?.();
-            }
+        // ========== STATUS ==========
+        function setStatus(msg, isError = false) {
+            console.log(msg);
+            statusEl.textContent = msg;
+            statusEl.className = isError ? 'error' : '';
         }
 
         // ========== MAIN INIT ==========
-        async function initApp() {
+        async function initPlayer() {
             try {
-                shaka.polyfill.installAll();
-                if (!shaka.Player.isBrowserSupported()) {
-                    updateStatus('Error: Browser not supported!', true);
+                // Get parameters from URL
+                const params = new URLSearchParams(window.location.search);
+                
+                // Option 1: Direct URL mode
+                let directUrl = params.get('url');
+                if (directUrl) {
+                    setStatus('📺 Loading direct URL...');
+                    await loadVideo(directUrl);
                     return;
                 }
 
-                // Get URL parameters
-                const urlParams = new URLSearchParams(window.location.search);
-                
-                // Option 1: Direct URL from query parameter
-                let directUrl = urlParams.get('url');
-                
-                // Option 2: API-based fetching
-                const batchId = urlParams.get('batchId');
-                const subjectId = urlParams.get('subjectId');
-                const scheduleId = urlParams.get('scheduleId');
+                // Option 2: API mode (uses vidcloud.eu.org)
+                const batchId = params.get('batchId') || params.get('batch_id');
+                const subjectId = params.get('subjectId') || params.get('subject_id');
+                const topicId = params.get('topicId') || params.get('topic_id');
+                const videoId = params.get('videoId') || params.get('video_id');
 
-                let manifestUrl = null;
-                let clearKey = null;
-
-                // Try direct URL first
-                if (directUrl) {
-                    updateStatus('📺 Using direct URL mode...');
-                    manifestUrl = directUrl;
-                    
-                    // Check if it's a CloudFront URL without signature
-                    if (manifestUrl.includes('cloudfront.net') && !manifestUrl.includes('Signature=')) {
-                        updateStatus('⚠️ Unsigned CloudFront URL detected - may fail', true);
-                    }
-                }
-                // Then try API mode
-                else if (batchId && subjectId && scheduleId) {
-                    updateStatus('📡 Fetching video from API...');
-                    const timestamp = new Date().getTime();
-                    const apiUrl = `https://brainboxinstitute.in/api/video-url?batchId=${batchId}&subjectId=${subjectId}&scheduleId=${scheduleId}&t=${timestamp}`;
-
-                    const response = await fetch(apiUrl);
-                    if (!response.ok) {
-                        throw new Error(`API Error: ${response.status}`);
-                    }
-
-                    const data = await response.json();
-                    if (!data.success || !data.video_data) {
-                        throw new Error('Invalid API response');
-                    }
-
-                    // Extract manifest URL
-                    let rawUrl = data.video_data.url;
-                    // Replace stream URL if needed
-                    if (rawUrl.includes('streamvideo.co.in')) {
-                        rawUrl = rawUrl.replace('https://streamvideo.co.in/play/', 'https://cloudfront.testwave.cc/');
-                    }
-                    
-                    manifestUrl = rawUrl;
-                    
-                    // Extract clear key
-                    if (data.video_data.keys && data.video_data.keys.length > 0) {
-                        const keyData = data.video_data.keys[0];
-                        if (keyData.includes(':')) {
-                            const [kid, key] = keyData.split(':');
-                            clearKey = { [kid]: key };
-                        }
-                    }
-                } else {
-                    throw new Error('Missing parameters. Provide either ?url= OR ?batchId=&subjectId=&scheduleId=');
+                if (batchId && subjectId && topicId && videoId) {
+                    setStatus('🔍 Fetching video from vidcloud...');
+                    await loadFromVidCloud(batchId, subjectId, topicId, videoId);
+                    return;
                 }
 
-                if (!manifestUrl) {
-                    throw new Error('No manifest URL available');
+                // Option 3: Play.php style (full URL with all params)
+                if (window.location.search.includes('video_url=')) {
+                    setStatus('📺 Loading from play.php style URL...');
+                    const videoUrl = params.get('video_url');
+                    if (videoUrl) {
+                        await loadVideo(decodeURIComponent(videoUrl));
+                        return;
+                    }
                 }
 
-                // ========== SETUP PROXY ==========
-                // Use your proxy endpoint for the manifest
-                const proxyBase = window.location.origin;
-                const proxyUrl = `${proxyBase}/api/player?url=${encodeURIComponent(manifestUrl)}`;
-                
-                updateStatus(`🔄 Loading via proxy: ${proxyUrl}`);
+                throw new Error('Missing parameters. Use: ?url=VIDEO_URL OR ?batchId=&subjectId=&topicId=&videoId=');
 
-                // ========== INIT SHAKA PLAYER ==========
-                video = document.getElementById('videoPlayer');
+            } catch (error) {
+                setStatus('❌ Error: ' + error.message, true);
+                console.error(error);
+            }
+        }
+
+        // ========== LOAD FROM VIDCLOUD ==========
+        async function loadFromVidCloud(batchId, subjectId, topicId, videoId) {
+            try {
+                // Build the URL like vidcloud.eu.org does
+                const url = `${VIDCLOUD_API}?batch_id=${batchId}&subject_id=${subjectId}&topic_id=${topicId}&video_id=${videoId}`;
+                
+                setStatus('📡 Fetching signed URL from vidcloud...');
+                const response = await fetch(url);
+                const html = await response.text();
+
+                // Extract the video URL from their page
+                // Method 1: Look for video_url parameter in the HTML
+                let videoUrl = null;
+                
+                // Try to find the video URL in their script tags
+                const scriptMatch = html.match(/video_url['"]?\s*[:=]\s*['"]([^'"]+)['"]/);
+                if (scriptMatch) {
+                    videoUrl = scriptMatch[1];
+                }
+
+                // Method 2: Look for the iframe or video source
+                if (!videoUrl) {
+                    const iframeMatch = html.match(/src=['"]([^'"]*cloudfront[^'"]*)['"]/);
+                    if (iframeMatch) {
+                        videoUrl = iframeMatch[1];
+                    }
+                }
+
+                // Method 3: Look for the MPD URL directly
+                if (!videoUrl) {
+                    const mpdMatch = html.match(/https?:\/\/[^'"]*\.mpd[^'"]*/);
+                    if (mpdMatch) {
+                        videoUrl = mpdMatch[0];
+                    }
+                }
+
+                if (!videoUrl) {
+                    throw new Error('Could not extract video URL from vidcloud response');
+                }
+
+                setStatus('✅ Video URL extracted, loading...');
+                await loadVideo(videoUrl);
+
+            } catch (error) {
+                throw new Error('Failed to load from vidcloud: ' + error.message);
+            }
+        }
+
+        // ========== LOAD VIDEO ==========
+        async function loadVideo(videoUrl) {
+            try {
+                video = document.getElementById('video');
+                
+                // Destroy existing player
+                if (player) {
+                    try { player.destroy(); } catch(e) {}
+                    player = null;
+                }
+
+                // Create new Shaka player
                 player = new shaka.Player(video);
-
-                // Configure networking for CloudFront
-                const networkingEngine = player.getNetworkingEngine();
-                if (networkingEngine) {
-                    networkingEngine.registerRequestFilter((type, request) => {
-                        // Add headers for CloudFront
-                        request.headers['Origin'] = window.location.origin;
-                        request.headers['Referer'] = window.location.href;
-                        request.allowCrossSiteCredentials = true;
-                    });
-                }
-
-                // Configure DRM
+                
+                // Configure for CloudFront
                 const config = {
                     streaming: {
                         retryParameters: {
@@ -203,72 +221,58 @@
                             baseDelay: 1000,
                             backoffFactor: 2
                         }
+                    },
+                    drm: {
+                        clearKeys: {} // No DRM for CloudFront signed URLs
                     }
                 };
-
-                // Add clear key if available
-                if (clearKey) {
-                    config.drm = { clearKeys: clearKey };
-                    updateStatus(`🔐 DRM configured with clear key`);
-                } else {
-                    config.drm = { clearKeys: {} };
-                    updateStatus(`🔓 No DRM - attempting direct playback`);
-                }
-
+                
                 player.configure(config);
 
-                // Error handling
+                // Handle errors
                 player.addEventListener('error', (event) => {
                     const detail = event.detail;
-                    const code = detail?.code || 'Unknown';
-                    const category = detail?.category || 'Unknown';
-                    const msg = detail?.message || '';
-                    updateStatus(`⚠️ Player Error: ${category} - ${code} | ${msg}`, true);
-                    
-                    // Try direct URL fallback if proxy fails
-                    if (detail?.category === 'NETWORK' && detail?.code === 401) {
-                        updateStatus('🔄 Trying direct URL fallback...');
-                        setTimeout(() => {
-                            try {
-                                player.load(manifestUrl);
-                            } catch (e) {
-                                updateStatus(`Fallback also failed: ${e.message}`, true);
-                            }
-                        }, 1000);
-                    }
+                    setStatus(`⚠️ Player error: ${detail?.category || 'Unknown'} - ${detail?.code || ''}`, true);
+                    console.error('Shaka error:', detail);
                 });
 
                 // Success events
                 player.addEventListener('manifestparsed', () => {
-                    updateStatus('✅ Manifest parsed successfully');
+                    setStatus('✅ Video loaded successfully!');
                 });
 
-                player.addEventListener('trackschanged', () => {
-                    updateStatus('🔄 Track quality changed');
-                });
-
-                // ========== LOAD VIDEO ==========
+                // Load the video
+                setStatus('🔄 Loading video...');
+                await player.load(videoUrl);
+                
+                // Auto-play
                 try {
-                    await player.load(proxyUrl);
-                    updateStatus('✅ Video loaded and playing!');
-                } catch (loadError) {
-                    // If proxy fails, try direct URL
-                    if (manifestUrl.includes('cloudfront.net')) {
-                        updateStatus('🔄 Proxy failed, trying direct CloudFront URL...');
-                        try {
-                            await player.load(manifestUrl);
-                            updateStatus('✅ Video loaded directly!');
-                        } catch (directError) {
-                            throw new Error(`Both proxy and direct loading failed: ${directError.message}`);
-                        }
-                    } else {
-                        throw loadError;
-                    }
+                    await video.play();
+                } catch (e) {
+                    console.log('Auto-play blocked, waiting for user interaction');
                 }
 
             } catch (error) {
-                const errorMsg = error?.message || JSON.stringify(error);
-                updateStatus(`❌ Critical Error: ${errorMsg}`, true);
+                throw new Error('Failed to load video: ' + error.message);
+            }
+        }
+
+        // ========== CONTROLS ==========
+        function togglePlay() {
+            if (!video) return;
+            video.paused ? video.play() : video.pause();
+        }
+
+        function skip(seconds) {
+            if (!video) return;
+            video.currentTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + seconds));
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                document.exitFullscreen().catch(() => {});
             }
         }
 
@@ -277,34 +281,15 @@
             if (!video) return;
             switch(e.key) {
                 case ' ':
-                case 'k':
-                    e.preventDefault();
-                    togglePlay();
-                    break;
-                case 'ArrowRight':
-                    e.preventDefault();
-                    video.currentTime += 10;
-                    break;
-                case 'ArrowLeft':
-                    e.preventDefault();
-                    video.currentTime -= 10;
-                    break;
-                case 'f':
-                case 'F':
-                    toggleFullscreen();
-                    break;
-            }
-        });
-
-        // Handle visibility change
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden && video && !video.paused) {
-                video.pause();
+                case 'k': e.preventDefault(); togglePlay(); break;
+                case 'ArrowRight': e.preventDefault(); skip(10); break;
+                case 'ArrowLeft': e.preventDefault(); skip(-10); break;
+                case 'f': case 'F': toggleFullscreen(); break;
             }
         });
 
         // ========== START ==========
-        document.addEventListener('DOMContentLoaded', initApp);
+        document.addEventListener('DOMContentLoaded', initPlayer);
     </script>
 </body>
 </html>
