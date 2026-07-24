@@ -8,7 +8,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        /* Your existing styles here */
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
         
         :root {
@@ -33,7 +32,6 @@
             overflow-x: hidden;
         }
 
-        /* Your existing CSS... */
         #loadingScreen {
             position: fixed;
             inset: 0;
@@ -57,7 +55,13 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Player container styles */
+        .loader-text {
+            font-size: 15px;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+        .loader-text span { color: var(--primary-light); font-weight: 600; }
+
         .player-page {
             min-height: 100vh;
             display: flex;
@@ -80,6 +84,15 @@
             font-weight: 800;
             font-size: 20px;
         }
+        .top-bar .lecture-title {
+            font-size: 14px;
+            color: var(--text-muted);
+            font-weight: 500;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
 
         .video-wrapper {
             position: relative;
@@ -100,7 +113,6 @@
             background: #000;
         }
 
-        /* Controls - simplified for brevity, include your full CSS */
         .controls-wrapper {
             position: absolute;
             bottom: 0;
@@ -170,6 +182,7 @@
             color: rgba(255,255,255,0.75);
             font-weight: 500;
             padding: 0 6px;
+            white-space: nowrap;
         }
 
         .spacer { flex: 1; }
@@ -237,6 +250,32 @@
             color: var(--text-muted);
         }
 
+        #errorScreen {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: var(--bg-dark);
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9998;
+            padding: 20px;
+            text-align: center;
+        }
+        #errorScreen i { font-size: 52px; color: var(--danger); margin-bottom: 20px; }
+        #errorScreen h2 { font-size: 22px; margin-bottom: 10px; }
+        #errorScreen p { color: var(--text-muted); font-size: 14px; max-width: 400px; margin-bottom: 24px; }
+        #retryBtn {
+            background: var(--gradient);
+            border: none;
+            color: #fff;
+            padding: 12px 32px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
         @media (max-width: 640px) {
             .controls-row { padding: 4px 8px 8px; gap: 0; }
             .ctrl-btn { width: 36px; height: 36px; font-size: 15px; }
@@ -253,20 +292,18 @@
 </div>
 
 <!-- Error Screen -->
-<div id="errorScreen" style="display:none; position:fixed; inset:0; background:var(--bg-dark); display:none; flex-direction:column; align-items:center; justify-content:center; z-index:9998; padding:20px; text-align:center;">
-    <i class="fas fa-exclamation-triangle" style="font-size:52px; color:var(--danger); margin-bottom:20px;"></i>
+<div id="errorScreen">
+    <i class="fas fa-exclamation-triangle"></i>
     <h2>Unable to Load Video</h2>
-    <p id="errorMsg" style="color:var(--text-muted); font-size:14px; max-width:400px; margin-bottom:24px;">Something went wrong</p>
-    <button id="retryBtn" onclick="initPlayer()" style="background:var(--gradient); border:none; color:#fff; padding:12px 32px; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer;">
-        <i class="fas fa-redo"></i> Retry
-    </button>
+    <p id="errorMsg">Something went wrong</p>
+    <button id="retryBtn" onclick="initPlayer()"><i class="fas fa-redo"></i> Retry</button>
 </div>
 
 <!-- Player -->
 <div class="player-page" id="playerPage" style="display:none;">
     <div class="top-bar">
         <div class="logo">Darzwallah</div>
-        <div class="lecture-title" id="lectureTitle" style="font-size:14px; color:var(--text-muted); font-weight:500; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Lecture Player</div>
+        <div class="lecture-title" id="lectureTitle">Lecture Player</div>
     </div>
 
     <div class="video-wrapper" id="videoWrapper">
@@ -294,18 +331,18 @@
                 <div class="spacer"></div>
                 
                 <div style="position:relative;">
-                    <button class="ctrl-btn" onclick="toggleSpeedMenu()">
+                    <button class="ctrl-btn" id="speedBtn" onclick="toggleSpeedMenu()">
                         <span class="speed-badge" id="speedBadge">1x</span>
                     </button>
                     <div class="speed-menu" id="speedMenu"></div>
                 </div>
                 
                 <div style="position:relative;">
-                    <button class="ctrl-btn" onclick="toggleQualityMenu()"><i class="fas fa-cog"></i></button>
+                    <button class="ctrl-btn" id="qualityBtn" onclick="toggleQualityMenu()"><i class="fas fa-cog"></i></button>
                     <div class="quality-menu" id="qualityMenu"></div>
                 </div>
                 
-                <button class="ctrl-btn" onclick="toggleFullscreen()"><i class="fas fa-expand"></i></button>
+                <button class="ctrl-btn" id="fsBtn" onclick="toggleFullscreen()"><i class="fas fa-expand"></i></button>
             </div>
         </div>
     </div>
@@ -321,7 +358,6 @@
 
 <script>
 // ========== CONFIGURATION ==========
-// Your API endpoint that returns the video URL
 const VIDEO_API_URL = 'https://darzwallah-playerv1.vercel.app/api/lectures?batchId=69047c05fc3bb2dd64711bd8&subjectId=physics-145369&tag=693c7c32083455818e97dd6e&page=1&contentType=videos';
 
 // ========== GLOBALS ==========
@@ -330,8 +366,6 @@ let video = null;
 let currentSpeed = 1;
 const speeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 let controlsTimeout = null;
-let lectures = [];
-let currentLectureIndex = 0;
 
 // ========== DOM HELPERS ==========
 const $ = id => document.getElementById(id);
@@ -339,7 +373,6 @@ const $ = id => document.getElementById(id);
 // ========== INIT ==========
 window.addEventListener('DOMContentLoaded', initPlayer);
 
-// Replace the existing initPlayer function with this:
 async function initPlayer() {
     $('loadingScreen').style.display = 'flex';
     $('errorScreen').style.display = 'none';
@@ -354,9 +387,11 @@ async function initPlayer() {
         if (videoUrl) {
             console.log('📺 Loading video from URL parameter:', videoUrl);
             
-            // Decode the URL (it's already decoded by URLSearchParams)
-            // But ensure it's properly formatted
+            // Decode the URL
             videoUrl = decodeURIComponent(videoUrl);
+            
+            // Update title
+            $('lectureTitle').textContent = 'Lecture Video';
             
             // Initialize dash.js with the URL
             setupDashPlayer(videoUrl);
@@ -364,18 +399,14 @@ async function initPlayer() {
             // Show player
             $('loadingScreen').style.display = 'none';
             $('playerPage').style.display = 'flex';
+            
+            // Build menus
+            buildSpeedMenu();
             return;
         }
         
-        // If no URL in query, try fetching from API (your existing code)
-        // ... your existing API fetch code here ...
-
-    } catch (error) {
-        console.error('Init error:', error);
-        showError(error.message);
-    }
-}
-        // Fetch lectures
+        // If no URL in query, fetch from API
+        console.log('📡 No URL in query, fetching from API...');
         const response = await fetch(VIDEO_API_URL);
         const data = await response.json();
 
@@ -383,15 +414,20 @@ async function initPlayer() {
             throw new Error('No lectures found');
         }
 
-        lectures = data.data;
+        const lecture = data.data[0];
         
-        // Auto-detect DRM status from response
-        const firstLecture = lectures[0];
-        const isDrmProtected = firstLecture.drmProtected || 
-                              firstLecture.videoDetails?.drmProtected || 
-                              false;
+        // Update title
+        $('lectureTitle').textContent = lecture.topic || 'Lecture Video';
 
-        // Update DRM status in UI
+        // Get video URL
+        videoUrl = lecture.url || lecture.videoDetails?.videoUrl || lecture.videoUrl;
+
+        if (!videoUrl) {
+            throw new Error('No video URL found in lecture data');
+        }
+
+        // Update DRM status
+        const isDrmProtected = lecture.drmProtected || lecture.videoDetails?.drmProtected || false;
         const drmChip = $('drmStatus');
         if (isDrmProtected) {
             drmChip.innerHTML = `<i class="fas fa-lock"></i><span>🔒 DRM Protected</span>`;
@@ -399,8 +435,8 @@ async function initPlayer() {
             drmChip.innerHTML = `<i class="fas fa-lock-open"></i><span>🔓 No DRM</span>`;
         }
 
-        // Load first lecture
-        await loadLecture(0);
+        // Initialize dash.js player
+        setupDashPlayer(videoUrl);
 
         // Show player
         $('loadingScreen').style.display = 'none';
@@ -415,50 +451,7 @@ async function initPlayer() {
     }
 }
 
-async function loadLecture(index) {
-    try {
-        const lecture = lectures[index];
-        currentLectureIndex = index;
-
-        if (!lecture) {
-            throw new Error('Lecture not found');
-        }
-
-        // Update title
-        $('lectureTitle').textContent = lecture.topic || 'Lecture Video';
-
-        // Get video URL - try multiple possible locations
-        let videoUrl = lecture.url || 
-                       lecture.videoDetails?.videoUrl || 
-                       lecture.videoUrl;
-
-        if (!videoUrl) {
-            throw new Error('No video URL found in lecture data');
-        }
-
-        // Check if it's a CloudFront signed URL (has Signature, Key-Pair-Id, Policy)
-        const isCloudFrontSigned = videoUrl.includes('Signature=') && 
-                                  videoUrl.includes('Key-Pair-Id=');
-
-        if (isCloudFrontSigned) {
-            console.log('🔐 Detected CloudFront signed URL - auto-decoding...');
-            // The URL already contains all signature parameters
-            // Just pass it through to dash.js
-        }
-
-        // Check if it's a DASH manifest (ends with .mpd or contains mpd)
-        const isDash = videoUrl.includes('.mpd') || videoUrl.includes('master.mpd');
-
-        // Initialize dash.js player
-        setupDashPlayer(videoUrl, lecture);
-
-    } catch (error) {
-        console.error('Load lecture error:', error);
-        showError(error.message);
-    }
-}
-
-function setupDashPlayer(videoUrl, lecture) {
+function setupDashPlayer(videoUrl) {
     video = $('videoPlayer');
 
     // Destroy existing player
@@ -489,23 +482,14 @@ function setupDashPlayer(videoUrl, lecture) {
                 MPD: 2000,
                 MediaSegment: 2000
             }
-        },
-        // Important: Allow cross-origin requests for CloudFront
-        common: {
-            requestHeaders: {
-                'Access-Control-Allow-Origin': '*'
-            }
         }
     });
 
     // Handle errors
     player.on(dashjs.MediaPlayer.events.ERROR, function(e) {
         console.error('Dash.js error:', e);
-        
-        // If it's a network error with CloudFront signed URL, 
-        // the URL might have expired
-        if (e.error && e.error.code === dashjs.MediaPlayer.errors.BASE_URL_ERROR) {
-            showError('Video URL may have expired. Please refresh the page.');
+        if (e.error) {
+            showError('Failed to load video: ' + (e.error.message || 'Unknown error'));
         }
     });
 
