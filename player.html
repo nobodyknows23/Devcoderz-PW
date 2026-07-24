@@ -339,12 +339,42 @@ const $ = id => document.getElementById(id);
 // ========== INIT ==========
 window.addEventListener('DOMContentLoaded', initPlayer);
 
+// Replace the existing initPlayer function with this:
 async function initPlayer() {
     $('loadingScreen').style.display = 'flex';
     $('errorScreen').style.display = 'none';
     $('playerPage').style.display = 'none';
 
     try {
+        // Get URL from query parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        let videoUrl = urlParams.get('url');
+        
+        // If URL is provided in query string, use it directly
+        if (videoUrl) {
+            console.log('📺 Loading video from URL parameter:', videoUrl);
+            
+            // Decode the URL (it's already decoded by URLSearchParams)
+            // But ensure it's properly formatted
+            videoUrl = decodeURIComponent(videoUrl);
+            
+            // Initialize dash.js with the URL
+            setupDashPlayer(videoUrl);
+            
+            // Show player
+            $('loadingScreen').style.display = 'none';
+            $('playerPage').style.display = 'flex';
+            return;
+        }
+        
+        // If no URL in query, try fetching from API (your existing code)
+        // ... your existing API fetch code here ...
+
+    } catch (error) {
+        console.error('Init error:', error);
+        showError(error.message);
+    }
+}
         // Fetch lectures
         const response = await fetch(VIDEO_API_URL);
         const data = await response.json();
