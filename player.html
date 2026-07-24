@@ -1,220 +1,196 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.ui.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/controls.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shaka Player with CloudFront Proxy</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.compiled.js"></script>
     <style>
-        body { margin: 0; background: #000; }
-        #video { width: 100%; max-height: 100vh; }
-        #loading { 
-            position: fixed; 
-            top: 50%; left: 50%; 
-            transform: translate(-50%, -50%);
-            color: white;
-            font-family: Arial;
+        body {
+            margin: 0;
+            background: #000;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
         }
-        #error {
-            position: fixed;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            color: #ff4444;
-            font-family: Arial;
-            display: none;
+        .video-container {
+            width: 100%;
+            max-width: 900px;
+        }
+        video {
+            width: 100%;
+            height: auto;
+            display: block;
+            background: #000;
+        }
+        #status-box {
+            color: #00ffcc;
+            margin-top: 15px;
+            font-size: 13px;
             text-align: center;
+            padding: 0 20px;
+            max-width: 800px;
+            word-break: break-all;
+        }
+        #controls {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        button {
+            background: #333;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #555;
         }
     </style>
 </head>
 <body>
-    <div id="loading">Loading lecture...</div>
-    <div id="error">
-        <h2>❌ Failed to Load Video</h2>
-        <p id="errorMsg">Something went wrong</p>
-        <button onclick="location.reload()">Retry</button>
+    <div class="video-container">
+        <video id="videoPlayer" controls autoplay playsinline></video>
+        <div id="status-box">Initializing player...</div>
+        <div id="controls">
+            <button onclick="togglePlay()">▶️ Play/Pause</button>
+            <button onclick="toggleFullscreen()">⛶ Fullscreen</button>
+        </div>
     </div>
-    <video id="video" autoplay controls style="width:100%; height:100vh;"></video>
 
     <script>
-        // ========== CONFIGURATION ==========
-        // Use your actual API endpoints
-        const API_BASE = "https://devcoderz-api.vercel.app";
-        const PROXY_URL = "https://rangexcoder-backend.onrender.com/apiserver/api/pi/play?url=";
-        
-        // If you have a separate proxy for CloudFront segments
-        const SEGMENT_PROXY = "https://your-proxy.vercel.app/api/proxy?url=";
-
-        // ========== GLOBALS ==========
+        const statusBox = document.getElementById('status-box');
         let player = null;
-        const video = document.getElementById('video');
-        const loadingEl = document.getElementById('loading');
-        const errorEl = document.getElementById('error');
-        const errorMsg = document.getElementById('errorMsg');
+        let video = null;
 
-        // ========== INIT ==========
-        document.addEventListener('shaka-ui-loaded', initPlayer);
-        window.addEventListener('load', () => {
-            // If shaka doesn't load, try init anyway
-            setTimeout(initPlayer, 2000);
-        });
+        function updateStatus(message, isError = false) {
+            console.log(message);
+            statusBox.style.color = isError ? '#ff4444' : '#00ffcc';
+            statusBox.innerText = message;
+        }
 
-        async function initPlayer() {
+        // ========== TOGGLE FUNCTIONS ==========
+        function togglePlay() {
+            if (!video) return;
+            video.paused ? video.play() : video.pause();
+        }
+
+        function toggleFullscreen() {
+            const container = document.querySelector('.video-container');
+            if (!document.fullscreenElement) {
+                container.requestFullscreen?.() || document.documentElement.requestFullscreen?.();
+            } else {
+                document.exitFullscreen?.();
+            }
+        }
+
+        // ========== MAIN INIT ==========
+        async function initApp() {
             try {
-                loadingEl.style.display = 'block';
-                errorEl.style.display = 'none';
-
-                // Get URL parameters
-                const params = new URLSearchParams(window.location.search);
-                
-                // Check if we have a direct URL parameter
-                let directUrl = params.get('url');
-                if (directUrl) {
-                    console.log('📺 Direct URL mode:', directUrl);
-                    await playDirectUrl(directUrl);
+                shaka.polyfill.installAll();
+                if (!shaka.Player.isBrowserSupported()) {
+                    updateStatus('Error: Browser not supported!', true);
                     return;
                 }
 
-                // Otherwise use API mode
-                const batchId = params.get('batchId');
-                const subjectId = params.get('subjectId');
-                const childId = params.get('childId');
-                const videoId = params.get('videoId');
-
-                if (!batchId || !subjectId || !childId || !videoId) {
-                    throw new Error('Missing required parameters: batchId, subjectId, childId, videoId');
-                }
-
-                console.log('📡 Fetching video URL from API...');
+                // Get URL parameters
+                const urlParams = new URLSearchParams(window.location.search);
                 
-                // Step 1: Get video URL with signed URL
-                const urlRes = await fetch(`${API_BASE}/api/video-url?batchId=${batchId}&subjectId=${subjectId}&childId=${childId}&videoId=${videoId}`);
-                const urlData = await urlRes.json();
+                // Option 1: Direct URL from query parameter
+                let directUrl = urlParams.get('url');
                 
-                if (!urlData.data || !urlData.data.url) {
-                    throw new Error('Failed to get video URL from API');
-                }
+                // Option 2: API-based fetching
+                const batchId = urlParams.get('batchId');
+                const subjectId = urlParams.get('subjectId');
+                const scheduleId = urlParams.get('scheduleId');
 
-                const manifest = urlData.data.url + (urlData.data.signedUrl || '');
-                console.log('📄 Manifest URL:', manifest);
+                let manifestUrl = null;
+                let clearKey = null;
 
-                // Step 2: Get KID from MPD
-                console.log('🔑 Fetching KID...');
-                const kidRes = await fetch(`${API_BASE}/api/key?mpdUrl=${encodeURIComponent(manifest)}`);
-                const kidData = await kidRes.json();
-                
-                if (!kidData.kid) {
-                    throw new Error('Failed to get KID from MPD');
-                }
-                console.log('🔑 KID:', kidData.kid);
-
-                // Step 3: Get decryption key
-                console.log('🔐 Fetching decryption key...');
-                const keyRes = await fetch(`${API_BASE}/api/get-otp?kid=${kidData.kid}`);
-                const keyData = await keyRes.json();
-                
-                if (!keyData.key) {
-                    throw new Error('Failed to get decryption key');
-                }
-                console.log('🔐 Key received:', keyData.key.substring(0, 20) + '...');
-
-                // Step 4: Initialize Shaka Player with clear key
-                await initShakaPlayer(manifest, keyData.keyid, keyData.key);
-
-            } catch (error) {
-                console.error('❌ Init error:', error);
-                showError(error.message);
-            }
-        }
-
-        // ========== DIRECT URL PLAYBACK ==========
-        async function playDirectUrl(url) {
-            try {
-                // Check if it's a signed CloudFront URL
-                const isCloudFront = url.includes('cloudfront.net');
-                const isSigned = url.includes('Signature=') || url.includes('Key-Pair-Id=');
-                
-                if (isCloudFront && !isSigned) {
-                    console.warn('⚠️ Unsigned CloudFront URL detected - may fail');
-                }
-
-                // Try to play directly with Shaka
-                await initShakaPlayer(url, null, null);
-                
-            } catch (error) {
-                console.error('Direct URL playback failed:', error);
-                showError('Failed to play video: ' + error.message);
-            }
-        }
-
-        // ========== SHAKA PLAYER INIT ==========
-        async function initShakaPlayer(manifestUrl, keyId, key) {
-            try {
-                // Destroy existing player
-                if (player) {
-                    try { player.destroy(); } catch(e) {}
-                    player = null;
-                }
-
-                // Create new player
-                player = new shaka.Player(video);
-                
-                // ========== FIX 1: Networking Engine with Proxy Support ==========
-                const networkingEngine = player.getNetworkingEngine();
-                
-                // Add request filters for CORS and headers
-                networkingEngine.registerRequestFilter((type, request) => {
-                    // Allow cross-origin credentials
-                    request.allowCrossSiteCredentials = true;
+                // Try direct URL first
+                if (directUrl) {
+                    updateStatus('📺 Using direct URL mode...');
+                    manifestUrl = directUrl;
                     
-                    // Add proper headers for CloudFront
-                    request.headers['Accept'] = '*/*';
-                    request.headers['Origin'] = window.location.origin;
-                    request.headers['Referer'] = window.location.href;
-                    
-                    // If it's a CloudFront request, add cookie for authentication
-                    if (request.uris && request.uris[0] && request.uris[0].includes('cloudfront.net')) {
-                        request.headers['Cookie'] = document.cookie || '';
+                    // Check if it's a CloudFront URL without signature
+                    if (manifestUrl.includes('cloudfront.net') && !manifestUrl.includes('Signature=')) {
+                        updateStatus('⚠️ Unsigned CloudFront URL detected - may fail', true);
                     }
-                });
+                }
+                // Then try API mode
+                else if (batchId && subjectId && scheduleId) {
+                    updateStatus('📡 Fetching video from API...');
+                    const timestamp = new Date().getTime();
+                    const apiUrl = `https://brainboxinstitute.in/api/video-url?batchId=${batchId}&subjectId=${subjectId}&scheduleId=${scheduleId}&t=${timestamp}`;
 
-                // ========== FIX 2: Response Filter to Rewrite Segment URLs ==========
-                networkingEngine.registerResponseFilter((type, response) => {
-                    // Only process manifest files
-                    if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST) {
-                        try {
-                            // Parse the MPD XML
-                            const text = new TextDecoder('utf-8').decode(response.data);
-                            
-                            // Check if it's an MPD file
-                            if (text.includes('<MPD') || text.includes('<Period')) {
-                                // Rewrite segment URLs to go through proxy if needed
-                                // This helps with CORS issues
-                                const modifiedText = text.replace(
-                                    /https:\/\/d1d34p8vz63oiq\.cloudfront\.net\/[^"'\s<>]+\.m4s/g,
-                                    (match) => {
-                                        // If you have a segment proxy, use it
-                                        if (SEGMENT_PROXY) {
-                                            return SEGMENT_PROXY + encodeURIComponent(match);
-                                        }
-                                        // Otherwise keep original
-                                        return match;
-                                    }
-                                );
-                                
-                                if (modifiedText !== text) {
-                                    console.log('🔄 Rewrote segment URLs in MPD');
-                                    response.data = new TextEncoder().encode(modifiedText);
-                                }
-                            }
-                        } catch (e) {
-                            console.warn('Failed to process MPD response:', e);
+                    const response = await fetch(apiUrl);
+                    if (!response.ok) {
+                        throw new Error(`API Error: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    if (!data.success || !data.video_data) {
+                        throw new Error('Invalid API response');
+                    }
+
+                    // Extract manifest URL
+                    let rawUrl = data.video_data.url;
+                    // Replace stream URL if needed
+                    if (rawUrl.includes('streamvideo.co.in')) {
+                        rawUrl = rawUrl.replace('https://streamvideo.co.in/play/', 'https://cloudfront.testwave.cc/');
+                    }
+                    
+                    manifestUrl = rawUrl;
+                    
+                    // Extract clear key
+                    if (data.video_data.keys && data.video_data.keys.length > 0) {
+                        const keyData = data.video_data.keys[0];
+                        if (keyData.includes(':')) {
+                            const [kid, key] = keyData.split(':');
+                            clearKey = { [kid]: key };
                         }
                     }
-                });
+                } else {
+                    throw new Error('Missing parameters. Provide either ?url= OR ?batchId=&subjectId=&scheduleId=');
+                }
 
-                // ========== FIX 3: DRM Configuration with Clear Keys ==========
+                if (!manifestUrl) {
+                    throw new Error('No manifest URL available');
+                }
+
+                // ========== SETUP PROXY ==========
+                // Use your proxy endpoint for the manifest
+                const proxyBase = window.location.origin;
+                const proxyUrl = `${proxyBase}/api/player?url=${encodeURIComponent(manifestUrl)}`;
+                
+                updateStatus(`🔄 Loading via proxy: ${proxyUrl}`);
+
+                // ========== INIT SHAKA PLAYER ==========
+                video = document.getElementById('videoPlayer');
+                player = new shaka.Player(video);
+
+                // Configure networking for CloudFront
+                const networkingEngine = player.getNetworkingEngine();
+                if (networkingEngine) {
+                    networkingEngine.registerRequestFilter((type, request) => {
+                        // Add headers for CloudFront
+                        request.headers['Origin'] = window.location.origin;
+                        request.headers['Referer'] = window.location.href;
+                        request.allowCrossSiteCredentials = true;
+                    });
+                }
+
+                // Configure DRM
                 const config = {
                     streaming: {
-                        ignoreTextStreamFailures: true,
-                        alwaysStreamText: false,
                         retryParameters: {
                             maxAttempts: 5,
                             baseDelay: 1000,
@@ -230,101 +206,80 @@
                     }
                 };
 
-                // Add clear keys if provided
-                if (keyId && key) {
-                    config.drm = {
-                        clearKeys: {
-                            [keyId]: key
-                        }
-                    };
-                    console.log('🔐 Clear key configured for KID:', keyId);
+                // Add clear key if available
+                if (clearKey) {
+                    config.drm = { clearKeys: clearKey };
+                    updateStatus(`🔐 DRM configured with clear key`);
                 } else {
-                    // Try without DRM (for non-encrypted content)
-                    config.drm = {
-                        clearKeys: {}
-                    };
-                    console.log('🔓 No DRM - attempting direct playback');
+                    config.drm = { clearKeys: {} };
+                    updateStatus(`🔓 No DRM - attempting direct playback`);
                 }
 
                 player.configure(config);
 
-                // ========== FIX 4: Error Handling ==========
+                // Error handling
                 player.addEventListener('error', (event) => {
-                    console.error('Shaka Player Error:', event.detail);
-                    const error = event.detail;
+                    const detail = event.detail;
+                    const code = detail?.code || 'Unknown';
+                    const category = detail?.category || 'Unknown';
+                    const msg = detail?.message || '';
+                    updateStatus(`⚠️ Player Error: ${category} - ${code} | ${msg}`, true);
                     
-                    // Try to recover from common errors
-                    if (error.category === 'NETWORK' && error.code === 401) {
-                        showError('Authentication failed. Please refresh and try again.');
-                    } else if (error.category === 'DRM') {
-                        showError('DRM error: ' + (error.message || 'Failed to decrypt video'));
-                    } else {
-                        showError('Player error: ' + (error.message || 'Unknown error'));
+                    // Try direct URL fallback if proxy fails
+                    if (detail?.category === 'NETWORK' && detail?.code === 401) {
+                        updateStatus('🔄 Trying direct URL fallback...');
+                        setTimeout(() => {
+                            try {
+                                player.load(manifestUrl);
+                            } catch (e) {
+                                updateStatus(`Fallback also failed: ${e.message}`, true);
+                            }
+                        }, 1000);
                     }
                 });
 
-                // Log important events
+                // Success events
                 player.addEventListener('manifestparsed', () => {
-                    console.log('✅ Manifest parsed successfully');
+                    updateStatus('✅ Manifest parsed successfully');
                 });
 
                 player.addEventListener('trackschanged', () => {
-                    console.log('🔄 Tracks changed');
+                    updateStatus('🔄 Track quality changed');
                 });
 
-                // ========== FIX 5: Load with Proxy ==========
-                // Use proxy URL for manifest to avoid CORS issues
-                let loadUrl = manifestUrl;
-                
-                // If it's a CloudFront URL without proxy, use the proxy
-                if (manifestUrl.includes('cloudfront.net') && !manifestUrl.includes(PROXY_URL)) {
-                    loadUrl = PROXY_URL + encodeURIComponent(manifestUrl);
-                    console.log('🔄 Using proxy for manifest:', loadUrl);
-                }
-
-                // Load the video
-                await player.load(loadUrl);
-                console.log('✅ Video loaded successfully');
-
-                // Auto-play
+                // ========== LOAD VIDEO ==========
                 try {
-                    await video.play();
-                } catch (e) {
-                    console.log('Auto-play blocked, waiting for user interaction');
-                }
-
-                loadingEl.style.display = 'none';
-
-                // ========== FIX 6: Handle fullscreen ==========
-                document.addEventListener('fullscreenchange', () => {
-                    if (document.fullscreenElement) {
-                        video.style.height = '100vh';
+                    await player.load(proxyUrl);
+                    updateStatus('✅ Video loaded and playing!');
+                } catch (loadError) {
+                    // If proxy fails, try direct URL
+                    if (manifestUrl.includes('cloudfront.net')) {
+                        updateStatus('🔄 Proxy failed, trying direct CloudFront URL...');
+                        try {
+                            await player.load(manifestUrl);
+                            updateStatus('✅ Video loaded directly!');
+                        } catch (directError) {
+                            throw new Error(`Both proxy and direct loading failed: ${directError.message}`);
+                        }
+                    } else {
+                        throw loadError;
                     }
-                });
+                }
 
             } catch (error) {
-                console.error('❌ Shaka init error:', error);
-                throw error;
+                const errorMsg = error?.message || JSON.stringify(error);
+                updateStatus(`❌ Critical Error: ${errorMsg}`, true);
             }
-        }
-
-        // ========== UTILITY FUNCTIONS ==========
-        function showError(msg) {
-            loadingEl.style.display = 'none';
-            errorEl.style.display = 'block';
-            errorMsg.textContent = msg;
-            console.error('Error:', msg);
         }
 
         // ========== KEYBOARD SHORTCUTS ==========
         document.addEventListener('keydown', (e) => {
             if (!video) return;
-            
             switch(e.key) {
                 case ' ':
                 case 'k':
                     e.preventDefault();
-                    video.paused ? video.play() : video.pause();
+                    togglePlay();
                     break;
                 case 'ArrowRight':
                     e.preventDefault();
@@ -336,23 +291,20 @@
                     break;
                 case 'f':
                 case 'F':
-                    if (!document.fullscreenElement) {
-                        document.documentElement.requestFullscreen();
-                    } else {
-                        document.exitFullscreen();
-                    }
+                    toggleFullscreen();
                     break;
             }
         });
 
-        // Handle visibility change for better performance
+        // Handle visibility change
         document.addEventListener('visibilitychange', () => {
-            if (document.hidden && video) {
+            if (document.hidden && video && !video.paused) {
                 video.pause();
             }
         });
 
-        console.log('🎯 Player initialized with fixes');
+        // ========== START ==========
+        document.addEventListener('DOMContentLoaded', initApp);
     </script>
 </body>
 </html>
